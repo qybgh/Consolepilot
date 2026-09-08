@@ -1,0 +1,81 @@
+# Consolepilot 默认配置。所有说明均为中文；密钥只能引用钥匙串或环境变量。
+
+[general]
+# 本地 HTTP 服务监听端口（1024–65535）
+port = 8765
+# 主题：tokyo-night / solarized-dark / nord / mono
+theme = "tokyo-night"
+# 窗口不透明度（0.75–1.0）
+opacity = 0.92
+# 是否始终置顶
+alwaysOnTop = true
+# 正文字体名称
+fontName = "SF Mono"
+# 正文​​字号
+fontSize = 13
+# 窄屏模式字号
+compactFontSize = 11
+# 最多保留的滚动历史行数
+scrollbackLines = 100000
+# 是否随 macOS 登录启动
+launchAtLogin = false
+# 全局呼出快捷键，例如 "cmd+shift+space"；留空表示关闭
+toggleHotkey = ""
+# 是否允许远程 Profile 访问真实 API；默认关闭以避免验收期间消耗 Token
+allowRealProvider = false
+
+[server]
+# 可选：本地 CLI/HTTP 服务鉴权 Token 引用；留空表示不启动本地服务
+authToken = ""
+# 单次 HTTP 请求体大小上限（字节，启用本地服务时生效）
+maxBodyBytes = 1048576
+
+[capture]
+# 捕获策略按顺序尝试：accessibility / simulatedCopy / clipboard
+strategy = ["accessibility", "simulatedCopy", "clipboard"]
+# 模拟复制前等待时间（毫秒）
+simulatedCopyWait = 120
+# 捕获完成后是否恢复原剪贴板
+restoreClipboard = true
+# 捕获文本最大字符数
+maxInputChars = 40000
+# 不触发捕获的应用 Bundle ID
+excludeBundleIds = ["com.apple.keychainaccess", "com.agilebits.onepassword7"]
+
+# ---------------- Profile 示例 ----------------
+# 取消下面注释即可配置 Provider。远程 Profile 的 apiKey 必须是安全引用。
+# [[profiles]]
+# id = "openai"
+# provider = "openai"              # openai 或 anthropic
+# baseURL = "https://api.openai.com/v1"
+# model = "gpt-4o-mini"
+# apiKey = "${keychain:openai}"
+# temperature = 0.3
+# maxTokens = 4096
+# timeoutSec = 120
+# priceInput = 0.0                  # 可选：每百万输入 Token 价格
+# priceOutput = 0.0                 # 可选：每百万输出 Token 价格
+
+# ---------------- Action 示例 ----------------
+# [[actions]]
+# id = "summarize"
+# name = "总结选中文本"
+# hotkey = "cmd+shift+s"            # 可选；需授权全局快捷键
+# profile = "openai"
+# systemPrompt = "你是一个简洁的助手。" # 可选
+# userPrompt = "请总结以下内容：{{input}}"
+# input = "selection"               # selection / clipboard / prompt / none
+# attachTo = "newSession"            # newSession / currentSession
+# autoShow = true
+# notifyOnDone = false
+# [actions.overrides]                # 可选覆盖 profile 参数
+# temperature = 0.2
+# maxTokens = 1200
+# model = "gpt-4o-mini"
+
+# ---------------- Tail 示例 ----------------
+# [[tails]]
+# path = "~/Library/Logs/my-app.log"
+# enabled = true
+# format = "text"                    # text / jsonl
+# fromEnd = true                      # 启动时从文件末尾开始

@@ -1,0 +1,743 @@
+import AppKit
+import GRDB
+import XCTest
+
+@testable import ConsolepilotCore
+
+final class InfrastructureTests: XCTestCase {
+    private func validConfig() -> AppConfig {
+        AppConfig(
+            general: GeneralConfig(
+                port: 8765, theme: "tokyo-night", opacity: 0.92, alwaysOnTop: true,
+                fontName: "SF Mono", fontSize: 13, compactFontSize: 11, scrollbackLines: 100_000,
+                launchAtLogin: false, toggleHotkey: ""),
+            server: ServerConfig(authTokenRef: "${env:CONSOLEPILOT_TEST_SECRET}", maxBodyBytes: 1_048_576),
+            capture: CaptureConfig(
+                strategy: [.clipboard], simulatedCopyWait: .milliseconds(120), restoreClipboard: true,
+                maxInputChars: 40_000, excludeBundleIds: []),
+            profiles: [
+                Profile(
+                    id: "local", provider: .openai, baseURL: URL(string: "http://127.0.0.1:11434/v1")!,
+                    model: "test", apiKeyRef: "", temperature: 0.3, maxTokens: 100, timeoutSec: 30,
+                    priceInput: nil, priceOutput: nil),
+            ],
+            actions: [
+                Action(
+                    id: "ask", name: "Ask", hotkey: nil, profileId: "local", systemPrompt: nil,
+                    userPrompt: "{{input}}", input: .prompt, attachTo: .newSession, autoShow: true,
+                    notifyOnDone: false, overrides: nil),
+            ],
+            tails: [])
+    }
+
+    private func report(for config: AppConfig) -> ValidationReport {
+        ConfigValidator().validate(config, sourceText: "")
+    }
+
+    private func assertError(_ code: ConfigErrorCode, in config: AppConfig, file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertTrue(report(for: config).errors.contains { $0.code == code }, "missing \(code)", file: file, line: line)
+    }
+
+    func testConfigValidatorCoversCoreValueAndReferenceRules() {
+        let base = validConfig()
+        let profile = Profile(
+            id: "local", provider: .openai, baseURL: URL(string: "ftp://example.com")!, model: "test",
+            apiKeyRef: "plain-secret", temperature: 3, maxTokens: 0, timeoutSec: 0, priceInput: nil, priceOutput: nil)
+        let general = GeneralConfig(
+            port: 80, theme: "unknown", opacity: 0.5, alwaysOnTop: true, fontName: "", fontSize: 13,
+            compactFontSize: 11, scrollbackLines: 1, launchAtLogin: false, toggleHotkey: "bad")
+        let capture = CaptureConfig(
+            strategy: [], simulatedCopyWait: .zero, restoreClipboard: true, maxInputChars: 1, excludeBundleIds: [])
+        let config = AppConfig(general: general, server: ServerConfig(authTokenRef: "plain", maxBodyBytes: 1), capture: capture, profiles: [profile], actions: base.actions, tails: [])
+        assertError(.invalidBaseURL, in: config)
+        assertError(.valueOutOfRange, in: config)
+        assertError(.invalidHotkeySyntax, in: config)
+        assertError(.unknownTheme, in: config)
+        assertError(.invalidStrategy, in: config)
+        assertError(.invalidServerAuth, in: config)
+        let remote = Profile(
+            id: "remote", provider: .openai, baseURL: URL(string: "https://example.com/v1")!, model: "test",
+            apiKeyRef: "plain-secret", temperature: 0.3, maxTokens: 100, timeoutSec: 30, priceInput: nil, priceOutput: nil)
+        let remoteConfig = AppConfig(
+            general: validConfig().general, server: validConfig().server, capture: validConfig().capture,
+            profiles: [remote], actions: [], tails: [])
+        assertError(.unresolvableSecret, in: remoteConfig)
+    }
+
+    func testConfigValidatorDetectsDuplicatesUnknownReferencesAndTemplateErrors() {
+        let base = validConfig()
+        let actions = [Action(
+            id: "ask", name: "Ask", hotkey: "cmd+k", profileId: "missing", systemPrompt: "{{unknown}}",
+            userPrompt: "{{input}}", input: .prompt, attachTo: .newSession, autoShow: true,
+            notifyOnDone: false, overrides: nil),
+            Action(
+                id: "ask", name: "Ask 2", hotkey: "cmd+k", profileId: "local", systemPrompt: nil,
+                userPrompt: "{{input}}", input: .prompt, attachTo: .newSession, autoShow: true,
+                notifyOnDone: false, overrides: nil)]
+        let config = AppConfig(general: base.general, server: base.server, capture: base.capture, profiles: [base.profiles[0], base.profiles[0]], actions: actions, tails: [])
+        let codes = Set(report(for: config).errors.map(\.code))
+        XCTAssertTrue(codes.contains(.duplicateProfileId))
+        XCTAssertTrue(codes.contains(.duplicateActionId))
+        XCTAssertTrue(codes.contains(.unknownProfileRef))
+        XCTAssertTrue(codes.contains(.duplicateHotkey))
+        XCTAssertTrue(codes.contains(.unknownPlaceholder))
+    }
+
+    func testConfigValidatorWarnsWhenAccessibilityIsUnavailable() {
+        let base = validConfig()
+        let action = Action(
+            id: "ask", name: "Ask", hotkey: nil, profileId: "local", systemPrompt: nil,
+            userPrompt: "{{selection}}", input: .selection, attachTo: .newSession, autoShow: true,
+            notifyOnDone: false, overrides: nil)
+        let config = AppConfig(general: base.general, server: base.server, capture: base.capture, profiles: base.profiles, actions: [action], tails: [])
+        let report = ConfigValidator(hasAccessibility: false).validate(config, sourceText: "")
+        XCTAssertTrue(report.errors.isEmpty)
+        XCTAssertTrue(report.warnings.contains { $0.code == .warnNoAXPermission })
+    }
+
+    func testConfigLoaderRejectsUnknownEnumValues() {
+        XCTAssertThrowsError(try ConfigLoader().parse("""
+            [[profiles]]
+            id = "x"
+            provider = "unknown"
+            baseURL = "http://127.0.0.1"
+            model = "x"
+            apiKey = ""
+            """))
+    }
+
+    func testConfigLoaderParsesNativeIntegerAfterEditorStyleRoundTrip() throws {
+        let source = """
+            [general]
+            port = 8766
+            scrollbackLines = 100000
+            [server]
+            authToken = "${env:CONSOLEPILOT_TEST_SECRET}"
+            [capture]
+            strategy = ["clipboard"]
+            [[profiles]]
+            id = "local"
+            provider = "openai"
+            baseURL = "http://127.0.0.1:11434/v1"
+            model = "mock"
+            apiKey = ""
+            """
+        let bridged = NSString(string: source) as String
+        let config = try ConfigLoader().parse(bridged)
+        XCTAssertEqual(config.general.port, 8766)
+    }
+
+    func testConfigLoaderRejectsMalformedIntegerBeforeTOMLDecoder() {
+        XCTAssertThrowsError(try ConfigLoader().parse("""
+            [general]
+            port =
+            """)) { error in
+            XCTAssertTrue(String(describing: error).contains("必须是整数"))
+        }
+    }
+
+    func testConfigLoaderReportsConciseMultilineStringError() {
+        let text = """
+        [[actions]]
+        id = "demo"
+        name = "Demo"
+        profile = "local"
+        systemPrompt = \"\"\"
+        未闭合内容
+        """
+        do {
+            _ = try ConfigLoader().parse(text)
+            XCTFail("expected malformed TOML")
+        } catch let error as ConfigError {
+            XCTAssertTrue(error.userMessage.contains("第 5 行") || error.userMessage.contains("第5行"))
+            XCTAssertTrue(error.userMessage.contains("三引号未闭合"))
+        } catch {
+            XCTFail("unexpected error: \(error)")
+        }
+    }
+
+    func testTemplateEngineSupportsPlanPlaceholdersAndEnvironment() {
+        setenv("CONSOLEPILOT_TEMPLATE_ENV", "env-value", 1)
+        let context = TemplateContext(
+            input: "input", selection: "selection", clipboard: "clipboard",
+            frontmost: FrontmostInfo(appName: "Notes", bundleId: "com.apple.Notes", windowTitle: "Doc"),
+            now: Date(timeIntervalSince1970: 0), language: "zh-Hans")
+        let rendered = TemplateEngine().render(
+            "{{app}} {{appBundleId}} {{bundleId}} {{lang}} {{language}} {{datetime}} {{env:CONSOLEPILOT_TEMPLATE_ENV}}",
+            context: context)
+        XCTAssertTrue(rendered.contains("Notes com.apple.Notes com.apple.Notes zh-Hans zh-Hans"))
+        XCTAssertTrue(rendered.contains("env-value"))
+    }
+
+    func testConfigValidatorRejectsMissingEnvironmentPlaceholder() {
+        let base = validConfig()
+        let action = Action(
+            id: "ask", name: "Ask", hotkey: nil, profileId: "local", systemPrompt: nil,
+            userPrompt: "{{env:CONSOLEPILOT_MISSING_TEMPLATE_ENV}}", input: .prompt,
+            attachTo: .newSession, autoShow: true, notifyOnDone: false, overrides: nil)
+        let config = AppConfig(
+            general: base.general, server: base.server, capture: base.capture,
+            profiles: base.profiles, actions: [action], tails: [])
+        XCTAssertTrue(report(for: config).errors.contains { $0.code == .unresolvableSecret })
+    }
+
+    func testTransportErrorRetryability() {
+        XCTAssertTrue(TransportError.serverError(status: 503).isRetryable)
+        XCTAssertFalse(TransportError.serverError(status: 400).isRetryable)
+    }
+
+    func testUserFacingErrorMessagesAreStableAndActionable() {
+        XCTAssertTrue(CaptureError.noPermission.userMessage.contains("辅助功能权限"))
+        XCTAssertTrue(CaptureError.secureInputActive.userMessage.contains("安全输入"))
+        XCTAssertTrue(CaptureError.excludedApp("com.example.app").userMessage.contains("com.example.app"))
+        XCTAssertTrue(TransportError.connectionLost.userMessage.contains("连接中断"))
+        XCTAssertTrue(TransportError.unauthorized.userMessage.contains("API Key"))
+        XCTAssertEqual(ConfigError.invalid("端口无效").userMessage, "配置无效：端口无效")
+    }
+
+    func testConfigLoaderParsesMinimalConfiguration() throws {
+        let text = """
+            [general]
+            port = 8765
+            theme = "tokyo-night"
+            opacity = 0.92
+            alwaysOnTop = true
+            fontName = "SF Mono"
+            fontSize = 13
+            compactFontSize = 11
+            scrollbackLines = 100000
+            launchAtLogin = false
+            toggleHotkey = ""
+
+            [server]
+            authToken = "${env:TEST_TOKEN}"
+            maxBodyBytes = 1048576
+
+            [capture]
+            strategy = ["clipboard"]
+            simulatedCopyWait = 120
+            restoreClipboard = true
+            maxInputChars = 40000
+            excludeBundleIds = []
+
+            [[profiles]]
+            id = "local"
+            provider = "openai"
+            baseURL = "http://127.0.0.1:11434/v1"
+            model = "test"
+            apiKey = ""
+
+            [[actions]]
+            id = "ask"
+            name = "Ask"
+            profile = "local"
+            userPrompt = "{{input}}"
+            input = "prompt"
+            attachTo = "newSession"
+            autoShow = true
+            notifyOnDone = false
+            """
+
+        let config = try ConfigLoader().parse(text)
+        XCTAssertEqual(config.profiles.first?.id, "local")
+        XCTAssertEqual(config.actions.first?.attachTo, .newSession)
+        XCTAssertEqual(config.capture.strategy, [.clipboard])
+    }
+
+    func testDefaultConfigurationPassesCoreValidation() throws {
+        let url = Bundle.module.url(forResource: "DefaultConfig", withExtension: "toml")
+        let text = try XCTUnwrap(url).flatMap { try? String(contentsOf: $0, encoding: .utf8) }
+        let config = try ConfigLoader().parse(try XCTUnwrap(text))
+        let report = ConfigValidator().validate(config, sourceText: try XCTUnwrap(text))
+        XCTAssertTrue(report.errors.isEmpty, report.errors.map(\.message).joined(separator: "\n"))
+    }
+
+    @MainActor
+    func testConfigStoreRejectsInvalidReloadAndKeepsPreviousConfig() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ConsolepilotConfig-\(UUID().uuidString)", isDirectory: true)
+        let url = directory.appendingPathComponent("config.toml")
+        let valid = """
+            [general]
+            port = 8765
+            theme = "tokyo-night"
+            opacity = 0.92
+            alwaysOnTop = true
+            fontName = "SF Mono"
+            fontSize = 13
+            compactFontSize = 11
+            scrollbackLines = 100000
+            launchAtLogin = false
+            toggleHotkey = ""
+            [server]
+            authToken = "${env:TEST_TOKEN}"
+            maxBodyBytes = 1048576
+            [capture]
+            strategy = ["clipboard"]
+            maxInputChars = 40000
+            [[profiles]]
+            id = "local"
+            provider = "openai"
+            baseURL = "http://127.0.0.1:11434/v1"
+            model = "test"
+            apiKey = ""
+            """
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try valid.write(to: url, atomically: true, encoding: .utf8)
+        let store = try ConfigStore(loader: ConfigLoader(configURL: url))
+        let original = store.current
+
+        try valid.replacingOccurrences(of: "port = 8765", with: "port = 80")
+            .write(to: url, atomically: true, encoding: .utf8)
+        store.reload()
+
+        XCTAssertEqual(store.current, original)
+        XCTAssertEqual(store.lastReport.errors.first?.code, .valueOutOfRange)
+    }
+
+    @MainActor
+    func testConfigStoreNotifiesOnlyAfterValidReload() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ConsolepilotConfigChange-\(UUID().uuidString)", isDirectory: true)
+        let url = directory.appendingPathComponent("config.toml")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let template = """
+            [general]
+            port = %d
+            theme = "tokyo-night"
+            """
+        try String(format: template, 8765).write(to: url, atomically: true, encoding: .utf8)
+        let store = try ConfigStore(loader: ConfigLoader(configURL: url))
+        var changes: [UInt16] = []
+        store.onChange = { changes.append($0.general.port) }
+
+        try String(format: template, 80).write(to: url, atomically: true, encoding: .utf8)
+        store.reload()
+        XCTAssertTrue(changes.isEmpty)
+
+        try String(format: template, 8766).write(to: url, atomically: true, encoding: .utf8)
+        store.reload()
+        XCTAssertEqual(changes, [8766])
+        XCTAssertEqual(store.current.general.port, 8766)
+    }
+
+    @MainActor
+    func testRuntimeBindingsRebuildProvidersAndHotkeysOnlyForValidConfig() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ConsolepilotRuntime-\(UUID().uuidString)", isDirectory: true)
+        let url = directory.appendingPathComponent("config.toml")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let template = """
+            [general]
+            port = %d
+            theme = "tokyo-night"
+            [server]
+            authToken = "${env:CONSOLEPILOT_TEST_SECRET}"
+            [capture]
+            strategy = ["clipboard"]
+            [[profiles]]
+            id = "local"
+            provider = "openai"
+            baseURL = "http://127.0.0.1:11434/v1"
+            model = "mock"
+            apiKey = ""
+            [[actions]]
+            id = "ask"
+            name = "Ask"
+            profile = "local"
+            userPrompt = "{{input}}"
+            hotkey = "%@"
+            input = "prompt"
+            attachTo = "newSession"
+            """
+        try String(format: template, 8765, "cmd+k").write(to: url, atomically: true, encoding: .utf8)
+        let store = try ConfigStore(loader: ConfigLoader(configURL: url))
+        let bindings = RuntimeBindings(configStore: store) { _ in MockAIProvider(delay: .zero) }
+        var triggered: String?
+        bindings.onAction = { triggered = $0 }
+        XCTAssertNotNil(bindings.provider(for: .openai))
+        XCTAssertEqual(bindings.hotkeys.registeredNames, ["ask"])
+        bindings.hotkeys.trigger(name: "ask")
+        XCTAssertEqual(triggered, "ask")
+
+        try String(format: template, 80, "").write(to: url, atomically: true, encoding: .utf8)
+        store.reload()
+        XCTAssertEqual(bindings.hotkeys.registeredNames, ["ask"])
+        XCTAssertEqual(store.current.general.port, 8765, "invalid reload must not replace runtime config")
+
+        try String(format: template, 8766, "cmd+shift+k").write(to: url, atomically: true, encoding: .utf8)
+        store.reload()
+        XCTAssertEqual(bindings.hotkeys.registeredNames, ["ask"])
+        XCTAssertEqual(store.current.general.port, 8766)
+    }
+
+    @MainActor
+    func testConfigStoreSurvivesTwentyAtomicReplacements() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ConsolepilotConfigWatch-\(UUID().uuidString)", isDirectory: true)
+        let url = directory.appendingPathComponent("config.toml")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let template = """
+            [general]
+            port = %d
+            theme = "tokyo-night"
+            """
+        try String(format: template, 8765).write(to: url, atomically: true, encoding: .utf8)
+        let store = try ConfigStore(loader: ConfigLoader(configURL: url))
+        var changes = 0
+        store.onChange = { _ in changes += 1 }
+        try store.startWatching()
+        defer { store.stopWatching() }
+
+        for index in 0..<20 {
+            let replacement = URL(fileURLWithPath: url.path + ".tmp")
+            try String(format: template, 8765 + index).write(
+                to: replacement, atomically: true, encoding: .utf8)
+            _ = try FileManager.default.replaceItemAt(url, withItemAt: replacement)
+            // Allow the coalesced filesystem event to reload before the next
+            // inode replacement, matching editor save behavior.
+            try await Task.sleep(for: .milliseconds(80))
+        }
+
+        XCTAssertEqual(store.current.general.port, 8784)
+        XCTAssertGreaterThanOrEqual(changes, 1)
+        XCTAssertTrue(store.lastReport.errors.isEmpty)
+    }
+
+    func testSecretResolverReadsEnvironmentReference() throws {
+        setenv("CONSOLEPILOT_TEST_SECRET", "test-value", 1)
+        let resolver = SecretResolver()
+        XCTAssertEqual(try resolver.resolve("${env:CONSOLEPILOT_TEST_SECRET}"), "test-value")
+        XCTAssertFalse(resolver.canResolve("${env:CONSOLEPILOT_MISSING_SECRET}"))
+    }
+
+    func testKeychainStoreRoundTripsAndDeletesOnlyTestAccount() throws {
+        let keychain = KeychainStore()
+        let account = "test-\(UUID().uuidString)"
+        defer { try? keychain.delete(name: account) }
+
+        XCTAssertFalse(keychain.exists(name: account))
+        try keychain.write(name: account, value: "secret-value")
+        XCTAssertTrue(keychain.exists(name: account))
+        XCTAssertEqual(try keychain.read(name: account), "secret-value")
+
+        try keychain.write(name: account, value: "updated-value")
+        XCTAssertEqual(try keychain.read(name: account), "updated-value")
+        try keychain.delete(name: account)
+        XCTAssertFalse(keychain.exists(name: account))
+    }
+
+    func testSecretResolverReportsMissingKeychainReference() {
+        let resolver = SecretResolver()
+        XCTAssertEqual(
+            resolver.canResolve("${keychain:missing-\(UUID().uuidString)}"), false)
+    }
+
+    func testConfigValidatorSeparatesToggleConflictAndValidEmptyToggle() {
+        let base = validConfig()
+        let action = Action(
+            id: "ask", name: "Ask", hotkey: "cmd+k", profileId: "local", systemPrompt: nil,
+            userPrompt: "{{input}}", input: .prompt, attachTo: .newSession, autoShow: true,
+            notifyOnDone: false, overrides: nil)
+        let conflicting = AppConfig(
+            general: GeneralConfig(
+                port: base.general.port, theme: base.general.theme, opacity: base.general.opacity,
+                alwaysOnTop: base.general.alwaysOnTop, fontName: base.general.fontName,
+                fontSize: base.general.fontSize, compactFontSize: base.general.compactFontSize,
+                scrollbackLines: base.general.scrollbackLines, launchAtLogin: base.general.launchAtLogin,
+                toggleHotkey: "cmd+k"),
+            server: base.server, capture: base.capture, profiles: base.profiles,
+            actions: [action], tails: [])
+        assertError(.hotkeyConflictWithToggle, in: conflicting)
+        XCTAssertFalse(report(for: base).errors.contains { $0.code == .hotkeyConflictWithToggle })
+    }
+
+    func testConfigValidatorChecksTailFormatAndParentDirectory() {
+        let base = validConfig()
+        let tail = TailConfig(
+            path: "/definitely/missing/consolepilot.log", enabled: true, format: .text, fromEnd: false)
+        let config = AppConfig(
+            general: base.general, server: base.server, capture: base.capture,
+            profiles: base.profiles, actions: base.actions, tails: [tail])
+        assertError(.invalidTailConfig, in: config)
+    }
+
+    func testConfigValidatorChecksActionOverrides() {
+        let base = validConfig()
+        let action = Action(
+            id: "ask", name: "Ask", hotkey: nil, profileId: "local", systemPrompt: nil,
+            userPrompt: "{{input}}", input: .prompt, attachTo: .newSession, autoShow: true,
+            notifyOnDone: false,
+            overrides: ParamOverrides(temperature: 2.5, maxTokens: 0, model: "  "))
+        let config = AppConfig(
+            general: base.general, server: base.server, capture: base.capture,
+            profiles: base.profiles, actions: [action], tails: [])
+        assertError(.valueOutOfRange, in: config)
+    }
+
+    @MainActor
+    func testActionRunnerBuildsPromptAndPersistsMockAssistantReply() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ConsolepilotAction-\(UUID().uuidString)", isDirectory: true)
+        let url = directory.appendingPathComponent("config.toml")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let configText = """
+            [general]
+            port = 8765
+            theme = "tokyo-night"
+            opacity = 0.92
+            scrollbackLines = 100000
+            [server]
+            authToken = "${env:CONSOLEPILOT_TEST_SECRET}"
+            [capture]
+            strategy = ["clipboard"]
+            maxInputChars = 40000
+            [[profiles]]
+            id = "local"
+            provider = "openai"
+            baseURL = "http://127.0.0.1:11434/v1"
+            model = "mock"
+            apiKey = ""
+            [[actions]]
+            id = "summarize"
+            name = "Summarize"
+            profile = "local"
+            userPrompt = "请总结：{{input}}"
+            input = "prompt"
+            attachTo = "newSession"
+            """
+        try configText.write(to: url, atomically: true, encoding: .utf8)
+        let config = try ConfigStore(loader: ConfigLoader(configURL: url))
+        let database = try AppDatabase(path: directory.appendingPathComponent("db.sqlite").path)
+        let sessions = try SessionStore(database: database)
+        let coordinator = StreamCoordinator(sessionStore: sessions, usageStore: UsageStore(database: database))
+        let runner = ActionRunner(
+            config: config, capture: TextCaptureService(config: config.current.capture),
+            secrets: SecretResolver(), providers: [.openai: MockAIProvider(delay: .zero)],
+            coordinator: coordinator, sessionStore: sessions)
+        try await runner.run(actionId: "summarize", overrideInput: "测试输入")
+        XCTAssertEqual(sessions.sessions.count, 1)
+        XCTAssertEqual(sessions.messages.first?.content, "请总结：测试输入")
+        XCTAssertTrue(sessions.messages.contains { $0.role == .assistant && $0.content.contains("Consolepilot") })
+    }
+
+    @MainActor
+    func testActionRunnerUsesSelectedTextTemplateAndCreatesSession() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ConsolepilotSelectionAction-\(UUID().uuidString)", isDirectory: true)
+        let url = directory.appendingPathComponent("config.toml")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let configText = """
+            [general]
+            port = 8765
+            theme = "tokyo-night"
+            opacity = 0.92
+            scrollbackLines = 100000
+            [server]
+            authToken = "${env:CONSOLEPILOT_TEST_SECRET}"
+            [capture]
+            strategy = ["accessibility"]
+            maxInputChars = 40000
+            [[profiles]]
+            id = "local"
+            provider = "openai"
+            baseURL = "http://127.0.0.1:11434/v1"
+            model = "mock"
+            apiKey = ""
+            [[actions]]
+            id = "summarize"
+            name = "总结选中文本"
+            profile = "local"
+            userPrompt = "请总结以下选中内容：{{selection}}"
+            input = "selection"
+            attachTo = "newSession"
+            """
+        try configText.write(to: url, atomically: true, encoding: .utf8)
+        let config = try ConfigStore(loader: ConfigLoader(configURL: url))
+        let database = try AppDatabase(path: directory.appendingPathComponent("db.sqlite").path)
+        let sessions = try SessionStore(database: database)
+        let coordinator = StreamCoordinator(sessionStore: sessions, usageStore: UsageStore(database: database))
+        let capture = TextCaptureService(
+            config: config.current.capture,
+            frontmost: FrontmostAppObserver(),
+            accessibility: { "选中的中文文本 🚀" },
+            clipboard: { nil },
+            simulatedCopy: { "" },
+            secureInput: { false })
+        var createdID: String?
+        let runner = ActionRunner(
+            config: config, capture: capture, secrets: SecretResolver(),
+            providers: [.openai: MockAIProvider(delay: .zero)], coordinator: coordinator,
+            sessionStore: sessions)
+        runner.onSessionCreated = { createdID = $0 }
+        try await runner.run(actionId: "summarize")
+        XCTAssertNotNil(createdID)
+        XCTAssertEqual(sessions.sessions.count, 1)
+        XCTAssertEqual(sessions.messages.first?.content, "请总结以下选中内容：选中的中文文本 🚀")
+        XCTAssertTrue(sessions.messages.contains { $0.role == .assistant })
+    }
+
+    @MainActor
+    func testCaptureLogStorePersistsMetadataWithoutCapturedText() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ConsolepilotCaptureLog-\(UUID().uuidString)", isDirectory: true)
+        let database = try AppDatabase(path: directory.appendingPathComponent("db.sqlite").path)
+        let store = CaptureLogStore(database: database)
+        let sensitiveText = "sensitive-selected-text"
+        store.record(
+            CaptureResult(
+                text: sensitiveText, strategy: .clipboard, sourceApp: "Notes",
+                sourceBundleId: "com.apple.Notes", windowTitle: "Secret",
+                wasTruncated: false, originalLength: sensitiveText.count, elapsed: .milliseconds(4)))
+        let row = try await database.writer.read { db in try CaptureLogEntry.fetchOne(db) }
+        XCTAssertEqual(row?.characterCount, sensitiveText.count)
+        XCTAssertEqual(row?.sourceApp, "Notes")
+        let columns = try await database.writer.read { db in
+            try Row.fetchAll(db, sql: "PRAGMA table_info(capture_log)").map { $0["name"] as String }
+        }
+        XCTAssertFalse(columns.contains("content"))
+        XCTAssertFalse(columns.contains("text"))
+    }
+
+    func testClipboardSnapshotRestoresStringRTFImageAndMultipleItems() throws {
+        let pasteboard = try XCTUnwrap(NSPasteboard(name: .init("ConsolepilotTests-\(UUID().uuidString)")))
+        pasteboard.clearContents()
+
+        let first = NSPasteboardItem()
+        first.setString("selected text", forType: .string)
+        first.setData(Data("{\\rtf1 test}".utf8), forType: .rtf)
+        first.setData(Data([0, 1, 2, 3]), forType: .tiff)
+        let second = NSPasteboardItem()
+        second.setString("second item", forType: .string)
+        XCTAssertTrue(pasteboard.writeObjects([first, second]))
+
+        let before = ClipboardSnapshot.capture(from: pasteboard)
+        pasteboard.clearContents()
+        pasteboard.setString("mutated", forType: .string)
+        before.restore(to: pasteboard)
+        let after = ClipboardSnapshot.capture(from: pasteboard)
+
+        XCTAssertTrue(before.isContentEqual(to: after))
+        XCTAssertEqual(pasteboard.string(forType: .string), "selected text\nsecond item")
+    }
+
+    func testClipboardSnapshotRoundTripsOneHundredTimes() throws {
+        let pasteboard = try XCTUnwrap(NSPasteboard(name: .init("ConsolepilotTests-\(UUID().uuidString)")))
+        pasteboard.clearContents()
+        pasteboard.setString("round-trip", forType: .string)
+
+        let original = ClipboardSnapshot.capture(from: pasteboard)
+        for _ in 0..<100 {
+            pasteboard.clearContents()
+            pasteboard.setString("temporary", forType: .string)
+            original.restore(to: pasteboard)
+            XCTAssertTrue(original.isContentEqual(to: ClipboardSnapshot.capture(from: pasteboard)))
+        }
+    }
+
+    @MainActor
+    func testTextCaptureFallbackUsesConfiguredOrderAndMetadata() async throws {
+        let config = CaptureConfig(
+            strategy: [.accessibility, .simulatedCopy, .clipboard], simulatedCopyWait: .zero,
+            restoreClipboard: true, maxInputChars: 5, excludeBundleIds: [])
+        let frontmost = FrontmostAppObserver()
+        var attempts: [CaptureStrategy] = []
+        let service = TextCaptureService(
+            config: config, frontmost: frontmost,
+            accessibility: {
+                attempts.append(.accessibility)
+                throw CaptureError.noPermission
+            },
+            clipboard: {
+                attempts.append(.clipboard)
+                return "abcdef"
+            },
+            simulatedCopy: {
+                attempts.append(.simulatedCopy)
+                throw CaptureError.allStrategiesFailed
+            },
+            secureInput: { false })
+        let result = try await service.capture()
+        XCTAssertEqual(result.strategy, .clipboard, "fallback order must follow configured strategies")
+        XCTAssertEqual(result.text, String("abcdef".prefix(5)))
+        XCTAssertTrue(result.wasTruncated)
+        XCTAssertEqual(result.originalLength, 6)
+        XCTAssertEqual(attempts, [.accessibility, .simulatedCopy, .clipboard])
+    }
+
+    @MainActor
+    func testSelectionCaptureNeverUsesStaleClipboardFallback() async throws {
+        let config = CaptureConfig(
+            strategy: [.accessibility, .simulatedCopy, .clipboard], simulatedCopyWait: .zero,
+            restoreClipboard: true, maxInputChars: 100, excludeBundleIds: [])
+        var attempts: [CaptureStrategy] = []
+        let service = TextCaptureService(
+            config: config, frontmost: FrontmostAppObserver(),
+            accessibility: {
+                attempts.append(.accessibility)
+                throw CaptureError.noPermission
+            },
+            clipboard: {
+                attempts.append(.clipboard)
+                return "stale clipboard content"
+            },
+            simulatedCopy: {
+                attempts.append(.simulatedCopy)
+                throw CaptureError.emptySelection
+            },
+            secureInput: { false })
+        do {
+            _ = try await service.capture(selectionOnly: true)
+            XCTFail("selection capture must not use stale clipboard content")
+        } catch let error as CaptureError {
+            XCTAssertEqual(error, .emptySelection)
+            XCTAssertEqual(attempts, [.accessibility, .simulatedCopy])
+        } catch {
+            XCTFail("unexpected error: \(error)")
+        }
+    }
+
+    @MainActor
+    func testTextCaptureStopsBeforeSyntheticCopyWhenSecureInputIsActive() async {
+        let config = CaptureConfig(
+            strategy: [.simulatedCopy, .clipboard], simulatedCopyWait: .zero,
+            restoreClipboard: true, maxInputChars: 100, excludeBundleIds: [])
+        var simulatedCopyCalled = false
+        let service = TextCaptureService(
+            config: config, frontmost: FrontmostAppObserver(),
+            accessibility: { "" }, clipboard: { "clipboard" },
+            simulatedCopy: {
+                simulatedCopyCalled = true
+                return "unsafe"
+            },
+            secureInput: { true })
+        do {
+            _ = try await service.capture()
+            XCTFail("secure input should block capture")
+        } catch let error as CaptureError {
+            XCTAssertEqual(error, .secureInputActive)
+            XCTAssertFalse(simulatedCopyCalled)
+        } catch {
+            XCTFail("unexpected error: \(error)")
+        }
+    }
+
+    @MainActor
+    func testTextCaptureReturnsNoPermissionWhenAllConfiguredStrategiesFailForPermission() async {
+        let config = CaptureConfig(
+            strategy: [.accessibility], simulatedCopyWait: .zero, restoreClipboard: true,
+            maxInputChars: 100, excludeBundleIds: [])
+        let service = TextCaptureService(
+            config: config, frontmost: FrontmostAppObserver(),
+            accessibility: { throw CaptureError.noPermission }, clipboard: { nil },
+            simulatedCopy: { throw CaptureError.noPermission }, secureInput: { false })
+        do {
+            _ = try await service.capture()
+            XCTFail("expected permission error")
+        } catch let error as CaptureError {
+            XCTAssertEqual(error, .noPermission)
+        } catch {
+            XCTFail("unexpected error: \(error)")
+        }
+    }
+}

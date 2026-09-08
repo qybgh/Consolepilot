@@ -1,0 +1,65 @@
+strict: true
+
+included:
+  - Sources
+  - Tests
+excluded:
+  - Sources/Generated
+
+analyzer_rules:
+  - unused_declaration
+  - unused_import
+
+opt_in_rules:
+  - empty_count
+  - empty_string
+  - force_unwrapping
+  - fatal_error_message
+  - first_where
+  - sorted_first_last
+
+disabled_rules:
+  - todo
+
+line_length:
+  warning: 120
+  error: 140
+  ignores_comments: false
+  ignores_urls: true
+
+file_length:
+  warning: 350
+  error: 400
+
+type_body_length:
+  warning: 200
+  error: 250
+
+function_body_length:
+  warning: 35
+  error: 40
+
+function_parameter_count:
+  warning: 5
+  error: 6
+
+cyclomatic_complexity:
+  warning: 8
+  error: 10
+
+custom_rules:
+  no_todo_markers:
+    name: "禁止遗留标记"
+    regex: "(TODO|FIXME|XXX|HACK|WIP)"
+    message: "提交前必须清除遗留标记"
+    severity: error
+  no_print:
+    name: "禁止 print"
+    regex: "(?<!\\.)\\b(print|debugPrint|dump)\\s*\\("
+    message: "使用 Log 而非 print"
+    severity: error
+  no_force_try:
+    name: "禁止 try!"
+    regex: "try!"
+    message: "禁止 try!，显式处理错误"
+    severity: error

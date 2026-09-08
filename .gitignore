@@ -1,0 +1,14 @@
+.build/
+DerivedData/
+dist/
+*.xcresult
+.DS_Store
+*.o
+*.d
+*.swiftdeps
+*.swiftdeps~
+
+# Local credentials and user configuration
+config.toml
+*.secret.toml
+.env
