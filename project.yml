@@ -46,6 +46,7 @@ targets:
         SKIP_INSTALL: YES
         DYLIB_INSTALL_NAME_BASE: "@rpath"
         MACH_O_TYPE: staticlib
+        GENERATE_INFOPLIST_FILE: YES
         SWIFT_EMIT_LOC_STRINGS: NO
   ConsolepilotApplication:
     type: framework
@@ -62,6 +63,7 @@ targets:
         SKIP_INSTALL: YES
         DYLIB_INSTALL_NAME_BASE: "@rpath"
         MACH_O_TYPE: staticlib
+        GENERATE_INFOPLIST_FILE: YES
         SWIFT_EMIT_LOC_STRINGS: NO
   ConsolepilotInfrastructure:
     type: framework
@@ -84,6 +86,7 @@ targets:
         SKIP_INSTALL: YES
         DYLIB_INSTALL_NAME_BASE: "@rpath"
         MACH_O_TYPE: staticlib
+        GENERATE_INFOPLIST_FILE: YES
         SWIFT_EMIT_LOC_STRINGS: NO
   ConsolepilotLegacyUI:
     type: framework
@@ -104,6 +107,7 @@ targets:
         SKIP_INSTALL: YES
         DYLIB_INSTALL_NAME_BASE: "@rpath"
         MACH_O_TYPE: staticlib
+        GENERATE_INFOPLIST_FILE: YES
         SWIFT_EMIT_LOC_STRINGS: NO
   Consolepilot:
     type: application

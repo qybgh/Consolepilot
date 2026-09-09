@@ -65,20 +65,22 @@ build: ## Debug arm64 构建 App + CLI（产物在 build/）
 	@echo "CLI: $(BUILD_DIR)/Build/Products/Debug/consolepilot"
 
 release: ## Release + ad-hoc 签名 + ZIP + SHA-256 manifest；用法 make release VERSION=0.2.0-p1
-	@test -n "$(VERSION)" || { echo "用法：make release VERSION=x.y.z"; exit 1; }; \
-	rm -rf $(DIST_DIR) && mkdir -p $(DIST_DIR); \
+	@set -e; \
+	test -n "$(VERSION)" || { echo "用法：make release VERSION=x.y.z"; exit 1; }; \
 	xcodebuild $(XCODEBUILD_FLAGS) -configuration Release -derivedDataPath $(BUILD_DIR) \
 		CODE_SIGN_IDENTITY="-" CODE_SIGN_STYLE=Manual \
 		MARKETING_VERSION=$(VERSION) CURRENT_PROJECT_VERSION=1 build; \
+	rm -rf $(DIST_DIR) && mkdir -p $(DIST_DIR); \
 	APP=$(DIST_DIR)/Consolepilot.app; \
 	rm -rf $$APP && cp -R $(BUILD_DIR)/Build/Products/Release/Consolepilot.app $$APP; \
 	CLI=$(DIST_DIR)/consolepilot; \
 	cp $(BUILD_DIR)/Build/Products/Release/consolepilot $$CLI && chmod +x $$CLI; \
 	codesign --force --sign - --entitlements Resources/Consolepilot.entitlements $$APP; \
 	codesign --verify --deep --strict --verbose=2 $$APP; \
-	shasum -a 256 $$APP/Contents/MacOS/Consolepilot $$CLI > $(DIST_DIR)/SHA256SUMS.txt; \
-	zip -qry $(DIST_DIR)/Consolepilot-$(VERSION).zip $$APP $$CLI $(DIST_DIR)/SHA256SUMS.txt; \
-	cd $(DIST_DIR) && shasum -a 256 Consolepilot-$(VERSION).zip; \
+	cd $(DIST_DIR) && { \
+		shasum -a 256 Consolepilot.app/Contents/MacOS/Consolepilot consolepilot > SHA256SUMS.txt; \
+		zip -qry ../Consolepilot-$(VERSION).zip Consolepilot.app consolepilot SHA256SUMS.txt; \
+	} && mv ../Consolepilot-$(VERSION).zip Consolepilot-$(VERSION).zip && shasum -a 256 Consolepilot-$(VERSION).zip; \
 	echo "✓ 产物：$(DIST_DIR)/Consolepilot-$(VERSION).zip"
 
 clean: ## 清理构建产物与 DerivedData
