@@ -12,8 +12,8 @@
 | P0-A 工程化（XcodeGen+Makefile+同构迁移） | 完成 | 见 P0-A 验收记录（2026-09-09） |
 | P0-B 入口替换与最小 SwiftUI 骨架 | 完成 | 见 P0-B 验收记录（2026-09-09） |
 | P0-C 协议/用例空壳与清理 | 完成 | 见 P0-C 验收记录（2026-09-09） |
-| P1-A 8-target 拆分 | 未开始 | — |
-| P1-B 领域与存储 | 未开始 | — |
+| P1-A 8-target 拆分 | 进行中（前置：实体/记录分离完成） | 见 P1 前置记录（2026-09-09） |
+| P1-B 领域与存储 | 进行中（实体纯化与 Records 落地；Repository 实现待续） | 见 P1 前置记录（2026-09-09） |
 | P1-C 流与并发重建 | 未开始 | — |
 | P1-D Provider 统一 contract + fixture | 未开始 | — |
 | P1-E Action 生命周期与配置处置 | 未开始 | — |
@@ -78,6 +78,19 @@
 - 门禁证据（本机 GUI 会话）：`make test` **83 项全部通过**（77 基线 + 6 新增）；`make build` `** BUILD SUCCEEDED **`；`make lint` 全绿（swift-format/SwiftLint strict 0 违规、analyze 通过、密钥扫描 0 命中、漂移检查通过；periphery 报告性项 `|| true`）。
 - periphery 报告性遗留（P1 接线后自然消失，P1-F 清零）：四协议「未作为 existential 使用」、占位实现未用参数（占位为 P0-C 有意空壳，测试已固定其存在与契约方向）。
 - 清理确认：`DependencyContainer` 无源码/工程引用（仅历史文档提及）；旧 SwiftPM `Package.swift`/`Scripts/` 无残留；无 `import ConsolepilotCore` 之外的旧模块引用。
+
+---
+
+### P1 前置记录（2026-09-09）：Domain 纯度前置——实体与 GRDB record 分离
+
+- 提交：`68588a8 refactor: split domain entities from GRDB records (P1-A purity foundation)`。
+- 背景：P1-A 的目标拆分要求 `ConsolepilotDomain` 纯净（禁 GRDB/AppKit），但 Session/Message/Usage/CaptureLog 四模型当时是 GRDB record，且 P0-C 的 Repository 协议引用这些实体——因此目标拆分（A）与「实体迁入 Domain、record 只存 Infrastructure」（B）在物理上必须交织执行，先完成本前置。
+- 落地：
+  - `Sources/Domain/Models/`：`Session`/`Message`/`Usage`（原 `UsageRecord` 更名）/`CaptureLogEntry` 现为纯值类型（Identifiable+Sendable+Equatable，无 GRDB）；`ProviderKind`、`CaptureStrategy` 从 `Infrastructure/Config/ConfigSchema.swift` 迁入 Domain。
+  - `Sources/Infrastructure/Database/Records/`：新增 `SessionRecord`/`MessageRecord`/`UsageRecord`/`CaptureLogRecord`（GRDB FetchableRecord+MutablePersistableRecord，含 Columns/`init(_ entity:)`/`entity` 映射）。
+  - 消费者适配：`SessionStore`/`UsageStore`/`CaptureLogStore` 与 `StreamCoordinator` 经 record 持久化、以实体对外；`UsageRepository` 协议参数改为 `Usage`。
+- 门禁证据（本机 GUI 会话）：`make test` **83 项全部通过**（行为与数量不变）；`make build` 通过；`make lint` 全绿（含漂移检查）。
+- 待续：P1-A 目标创建与文件归位（含 import 方向扫描）、P1-B 四个 Repository 的 SQLite 实现 + AppConfig 迁 Domain。
 
 ---
 
