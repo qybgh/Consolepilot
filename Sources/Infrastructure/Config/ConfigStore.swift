@@ -74,7 +74,13 @@ package final class ConfigStore {
             let work = DispatchWorkItem { [weak self] in
                 guard let self else { return }
                 self.reload()
-                if requiresRebind { try? self.startWatching() }
+                if requiresRebind {
+                    do {
+                        try self.startWatching()
+                    } catch {
+                        Log.error("配置热重载后重新监听失败：\(error)", category: .config)
+                    }
+                }
             }
             self.reloadWorkItem = work
             DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(40), execute: work)

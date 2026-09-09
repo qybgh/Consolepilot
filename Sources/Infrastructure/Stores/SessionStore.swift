@@ -94,11 +94,17 @@ package final class SessionStore {
             sessions.removeAll { $0.id == id }
             if currentId == id {
                 currentId = sessions.first?.id
-                if let next = currentId,
-                    let page = try? Self.fetchMessagePage(database: database, sessionId: next, offset: 0)
-                {
-                    messages = Array(page.prefix(Self.messagePageSize).reversed())
-                    hasEarlierMessages = page.count > Self.messagePageSize
+                if let next = currentId {
+                    do {
+                        let page = try Self.fetchMessagePage(
+                            database: database, sessionId: next, offset: 0)
+                        messages = Array(page.prefix(Self.messagePageSize).reversed())
+                        hasEarlierMessages = page.count > Self.messagePageSize
+                    } catch {
+                        Log.error("删除会话后读取消息失败：\(error)", category: .domain)
+                        messages = []
+                        hasEarlierMessages = false
+                    }
                 } else {
                     messages = []
                     hasEarlierMessages = false

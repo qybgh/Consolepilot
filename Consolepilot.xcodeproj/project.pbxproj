@@ -13,6 +13,7 @@
 		02E1550B699C97BB6EE88F18 /* ConsolepilotLegacyUI.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 098AE26FB7D5BA26E8C5610E /* ConsolepilotLegacyUI.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		0374803BEFCEBCF8005B3B8F /* ConsolepilotApplication.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8B581AB306B20BA10AFB759B /* ConsolepilotApplication.framework */; };
 		05E7960BCF9AF50C3EC3A5DF /* SQLiteRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEBD1E6554C74CF702118BDC /* SQLiteRepositoryTests.swift */; };
+		0637C59C24097ABE29F93845 /* StabilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE18D4529157AE84C9DA30F6 /* StabilityTests.swift */; };
 		06499AC4026ADE27599F2466 /* FileConfigurationRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = B58D164D31E18BCB1E67AE09 /* FileConfigurationRepository.swift */; };
 		0F5615802185B42322490854 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71FB9E57D40119E219DA42C9 /* Theme.swift */; };
 		128F744F0438F01946FEFDA0 /* ConsolepilotInfrastructure.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B1FCF90D34136B2696EF1F27 /* ConsolepilotInfrastructure.framework */; };
@@ -366,6 +367,7 @@
 		C9EAE35D7105EC52D73DD22C /* UsageWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageWindowController.swift; sourceTree = "<group>"; };
 		CAC7D78394EBA2051417C59F /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarController.swift; sourceTree = "<group>"; };
 		CB035699130D5CEC0043F642 /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
+		CE18D4529157AE84C9DA30F6 /* StabilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StabilityTests.swift; sourceTree = "<group>"; };
 		CE22BD472E7ABE794942AD66 /* SQLiteSessionRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteSessionRepository.swift; sourceTree = "<group>"; };
 		CF8733771374C8C42E936C19 /* anthropic-messages-stream.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "anthropic-messages-stream.txt"; sourceTree = "<group>"; };
 		D69A8BA436E0FD0C37DBEEAB /* AnthropicWire.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnthropicWire.swift; sourceTree = "<group>"; };
@@ -556,6 +558,7 @@
 				DD36A78C1B49D5D3C4385D18 /* RepositoryContractTests.swift */,
 				83119EDB581D8339ED6E19F7 /* ServerTests.swift */,
 				AEBD1E6554C74CF702118BDC /* SQLiteRepositoryTests.swift */,
+				CE18D4529157AE84C9DA30F6 /* StabilityTests.swift */,
 				0DAF34B3338FB73EC985AC0A /* StreamExecutionTests.swift */,
 				02C036AD7A2CDC12A169F39C /* TransportTests.swift */,
 				917B50B54DB7057960AFFC5D /* UseCasePlaceholderTests.swift */,
@@ -1220,6 +1223,7 @@
 				4F573AB5E44CA518A3AD6E05 /* RepositoryContractTests.swift in Sources */,
 				05E7960BCF9AF50C3EC3A5DF /* SQLiteRepositoryTests.swift in Sources */,
 				1660100D058D58C115123DDC /* ServerTests.swift in Sources */,
+				0637C59C24097ABE29F93845 /* StabilityTests.swift in Sources */,
 				A06704AAF3DE93DD21085302 /* StreamExecutionTests.swift in Sources */,
 				3E26FD6E7E09A014DF069941 /* TransportTests.swift in Sources */,
 				8113E09B7BE80F13C8908C15 /* URLProtocolStub.swift in Sources */,
