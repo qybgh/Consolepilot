@@ -136,6 +136,13 @@ final class TransportTests: XCTestCase {
         XCTAssertEqual(body.temperature, 0.8)
         XCTAssertEqual(body.stream, true)
         XCTAssertEqual(body.messages.map(\.content), ["system", "hello"])
+        XCTAssertEqual(built.timeoutInterval, 30, "未设置 Action 级 timeoutSec 时回退 profile 默认值")
+
+        let overridden = ChatRequest(
+            profile: profile, apiKey: "secret-value", systemPrompt: nil,
+            messages: [ChatMessage(role: .user, content: "hi")],
+            overrides: ParamOverrides(temperature: nil, maxTokens: nil, model: nil, timeoutSec: 60))
+        XCTAssertEqual(try RequestBuilder().buildOpenAI(overridden).timeoutInterval, 60)
 
         let anthropicProfile = Profile(
             id: "anthropic", provider: .anthropic, baseURL: URL(string: "https://api.anthropic.com")!, model: "claude",

@@ -184,13 +184,29 @@ package final class SessionStore {
         sessions.first { $0.id == id }
     }
 
+    /// 返回某会话的完整消息（按时间正序），供后台 Action 独立会话续写上下文使用。
+    package func history(sessionId: String) -> [Message] {
+        do {
+            return try database.writer.read { db in
+                try MessageRecord
+                    .filter(Column("session_id") == sessionId)
+                    .order(Column("created_at").asc, Column.rowID.asc)
+                    .fetchAll(db)
+                    .map(\.entity)
+            }
+        } catch {
+            Log.error("读取会话历史失败：\(error)", category: .domain)
+            return []
+        }
+    }
+
     private static func fetchMessagePage(
         database: AppDatabase, sessionId: String, offset: Int
     ) throws -> [Message] {
         try database.writer.read { db in
             try MessageRecord
                 .filter(Column("session_id") == sessionId)
-                .order(Column("created_at").desc, Column("id").desc)
+                .order(Column("created_at").desc, Column.rowID.desc)
                 .limit(messagePageSize + 1, offset: offset)
                 .fetchAll(db)
                 .map(\.entity)

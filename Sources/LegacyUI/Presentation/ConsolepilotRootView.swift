@@ -653,6 +653,7 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
                 if sessionStore?.currentId == sessionId {
                     statusLabel.stringValue = status
                 }
+                self.notifyActionCompletionIfNeeded(sessionId: sessionId, state: state)
             }
             streamCoordinator.onFinish = { [weak self] sessionId, state in
                 guard let self, sessionStore?.currentId == sessionId else { return }
@@ -678,6 +679,14 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
                     if let task = self.pendingActionTask {
                         self.actionTasks[id] = task
                         self.pendingActionTask = nil
+                    }
+                    // autoShow：仅显示主窗口，不抢焦点，源应用保持前台。
+                    if let session = self.sessionStore?.session(id: id),
+                        let actionId = session.actionId,
+                        let action = self.configStore?.current.action(id: actionId),
+                        action.autoShow
+                    {
+                        self.window?.orderFront(nil)
                     }
                 }
             }
@@ -779,10 +788,9 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
             }
             guard let actionRunner else { return (503, Data("ActionRunner 未就绪".utf8)) }
             do {
-                try await actionRunner.run(actionId: payload.actionId, overrideInput: payload.input)
-                if let id = sessionStore?.sessions.first(where: { $0.actionId == payload.actionId })?.id {
-                    showSession(id)
-                }
+                let sessionId = try await actionRunner.run(
+                    actionId: payload.actionId, overrideInput: payload.input)
+                showSession(sessionId)
                 return (202, Data("accepted".utf8))
             } catch {
                 let message = (error as? ConfigError)?.userMessage ?? "请求执行失败"
@@ -805,6 +813,20 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
         }
         reloadSessionButtons()
         return (202, Data("accepted".utf8))
+    }
+
+    /// notifyOnDone：仅在 App 未在前台且 Action 完成/失败时发本地通知。
+    /// 通知正文只含 Action 名与状态，绝不含捕获正文或回复内容。
+    private func notifyActionCompletionIfNeeded(sessionId: String, state: MessageState) {
+        guard state == .complete || state == .failed,
+            let session = sessionStore?.session(id: sessionId),
+            session.channel == .action,
+            let actionId = session.actionId,
+            let action = configStore?.current.action(id: actionId),
+            action.notifyOnDone,
+            !(NSApp.isActive && NSApp.keyWindow?.isKeyWindow == true)
+        else { return }
+        ActionNotifier.notify(title: action.name, failed: state == .failed)
     }
 
     private struct LocalPrompt: Codable, Sendable {

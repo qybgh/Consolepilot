@@ -33,6 +33,7 @@
 		2DC6936748C1D3D3CA3A472B /* SSEDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 393E308E5EC0FB20D978561E /* SSEDecoder.swift */; };
 		2FAC87B518227E7AB90D6A12 /* FrontmostAppObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8FE6D63A47A6F2819DF0BA3 /* FrontmostAppObserver.swift */; };
 		34850F503AD65F6193263F93 /* UsageRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 734E1A7CB34B900078B9DCFD /* UsageRepository.swift */; };
+		3B89C187EB525BBBC30B9EBF /* ActionNotifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE0190C4334426D6DEB66B26 /* ActionNotifier.swift */; };
 		3C04D1111888AA9F71DD9836 /* Clock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E16A77DB60731E1BA941AA8 /* Clock.swift */; };
 		3C23787E341816FC025D0F84 /* ChatMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = C235D8F1DA1AA6C2498F5070 /* ChatMessage.swift */; };
 		3D8CAAD2F77CB55B3BBAC733 /* AnthropicWire.swift in Sources */ = {isa = PBXBuildFile; fileRef = D69A8BA436E0FD0C37DBEEAB /* AnthropicWire.swift */; };
@@ -87,7 +88,6 @@
 		9514BC603900C663A927C8D5 /* ConsolepilotLegacyUI.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 098AE26FB7D5BA26E8C5610E /* ConsolepilotLegacyUI.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		9534880218B5FEC5397F7E8E /* ConsolepilotApplication.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 8B581AB306B20BA10AFB759B /* ConsolepilotApplication.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		96F225E8D29549AA1CE85C79 /* AccessibilityCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B4831E2AFFF71D1C86DEC9E /* AccessibilityCapture.swift */; };
-		9B0622860186856B2FB0FD26 /* ActionExecutionUseCasePlaceholder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B90B8B629B2616E7961407A /* ActionExecutionUseCasePlaceholder.swift */; };
 		9EA0D7AB92E1A8E03E28B905 /* TerminalNSTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8D76FA3C58EA85E51646213 /* TerminalNSTextView.swift */; };
 		9F38BEFE5D2696D91DD8BE08 /* ConsolepilotInfrastructure.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = B1FCF90D34136B2696EF1F27 /* ConsolepilotInfrastructure.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		A05E3E5A3D5D577B0845CB02 /* Migrations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EA091CCFD5450A301A89260 /* Migrations.swift */; };
@@ -305,7 +305,6 @@
 		3E16A77DB60731E1BA941AA8 /* Clock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clock.swift; sourceTree = "<group>"; };
 		41C98F9A730FD01D3C39A563 /* ConfigurationRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigurationRepository.swift; sourceTree = "<group>"; };
 		49D305D8C0A63A2A973E3973 /* RootHostView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootHostView.swift; sourceTree = "<group>"; };
-		4B90B8B629B2616E7961407A /* ActionExecutionUseCasePlaceholder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionExecutionUseCasePlaceholder.swift; sourceTree = "<group>"; };
 		4D06441C51810F9B4AE49834 /* Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Session.swift; sourceTree = "<group>"; };
 		4DCF358EE190CBADEF86A1DE /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
 		4ED6645424721F0B32D2E9A2 /* anthropic-no-stop.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "anthropic-no-stop.txt"; sourceTree = "<group>"; };
@@ -375,6 +374,7 @@
 		DC76CC25665E6AB5934B7644 /* ActionExecutionUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionExecutionUseCase.swift; sourceTree = "<group>"; };
 		DD237EA520EB4DF7292FF201 /* ConfigLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigLoader.swift; sourceTree = "<group>"; };
 		DD36A78C1B49D5D3C4385D18 /* RepositoryContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepositoryContractTests.swift; sourceTree = "<group>"; };
+		DE0190C4334426D6DEB66B26 /* ActionNotifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionNotifier.swift; sourceTree = "<group>"; };
 		DF754F0FCED6A7103BB4096F /* CaptureLogRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureLogRecord.swift; sourceTree = "<group>"; };
 		DFC109E4AAF70381DC6DCC5A /* SettingsSceneView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSceneView.swift; sourceTree = "<group>"; };
 		E4D17EE9A0F7491F4FAEDC5B /* TerminalRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalRenderer.swift; sourceTree = "<group>"; };
@@ -609,7 +609,6 @@
 		57A6E144F20FBCF7CEFC78BD /* Application */ = {
 			isa = PBXGroup;
 			children = (
-				4B90B8B629B2616E7961407A /* ActionExecutionUseCasePlaceholder.swift */,
 				2A76CC799800DD805DFC2433 /* ConversationUseCasePlaceholder.swift */,
 			);
 			path = Application;
@@ -691,6 +690,7 @@
 		8E619C2DEE94BADB07281147 /* Presentation */ = {
 			isa = PBXGroup;
 			children = (
+				DE0190C4334426D6DEB66B26 /* ActionNotifier.swift */,
 				29EDE3FDB8458C42AF85CC88 /* ChatTranscriptView.swift */,
 				2D19A736DFC24EEC1693C175 /* ConsolepilotRootView.swift */,
 				ED0913E3C999EE50F3CDA234 /* OverlayScroller.swift */,
@@ -1082,7 +1082,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				9B0622860186856B2FB0FD26 /* ActionExecutionUseCasePlaceholder.swift in Sources */,
 				EC409EF7534F705337E5094C /* ConversationUseCasePlaceholder.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1092,6 +1091,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				65DB2C2F4547F6CCEF622C2C /* ANSIParser.swift in Sources */,
+				3B89C187EB525BBBC30B9EBF /* ActionNotifier.swift in Sources */,
 				BE6429257186BDCC1EB330CD /* ChatTranscriptView.swift in Sources */,
 				21248FAE8C1A281498501A88 /* ConsolepilotRootView.swift in Sources */,
 				80842671DD809431A1E8F3D1 /* MarkdownMessageRenderer.swift in Sources */,

@@ -47,7 +47,12 @@ package final class ActionRunner {
         self.localProvider = localProvider
     }
 
-    package func run(actionId: String, overrideInput: String? = nil, sourcePID: pid_t? = nil) async throws {
+    /// 执行一次 Action 并返回承载该次执行的会话 id。
+    ///
+    /// `sessionMode = .dedicated`：会话按 `actionId + sourceApp` 复用——最近一个
+    /// 匹配且空闲（无进行中流）的会话会被续写，否则新建独立后台会话。
+    @discardableResult
+    package func run(actionId: String, overrideInput: String? = nil, sourcePID: pid_t? = nil) async throws -> String {
         guard let action = config.current.action(id: actionId) else {
             throw ConfigError.invalid("未知 action：\(actionId)")
         }
@@ -67,11 +72,13 @@ package final class ActionRunner {
             clipboard: action.input == .clipboard ? input : nil, frontmost: frontmost,
             now: Date(), language: "")
         let prompt = templateEngine.render(action.userPrompt, context: context)
-        let session = sessionStore.create(
-            channel: .action, title: action.name,
-            meta: SessionMeta(
-                actionId: action.id, profileId: profile.id, provider: profile.provider,
-                model: profile.model, sourceApp: frontmost.appName))
+        let session =
+            dedicatedSession(for: action, sourceApp: frontmost.appName)
+            ?? sessionStore.create(
+                channel: .action, title: action.name,
+                meta: SessionMeta(
+                    actionId: action.id, profileId: profile.id, provider: profile.provider,
+                    model: profile.model, sourceApp: frontmost.appName))
         sessionStore.appendMessage(Message(sessionId: session.id, role: .user, content: prompt))
         onSessionCreated?(session.id)
         let provider =
@@ -90,12 +97,39 @@ package final class ActionRunner {
         } else {
             apiKey = try secrets.resolve(profile.apiKeyRef)
         }
-        let history = sessionStore.messages.map { ChatMessage(role: $0.role, content: $0.content) }
+        // 独立会话续写：携带该会话完整历史作为上下文，仅保留 user/assistant 轮次。
+        let history = sessionStore.history(sessionId: session.id)
+            .filter { $0.role == .user || $0.role == .assistant }
+            .map { ChatMessage(role: $0.role, content: $0.content) }
         let request = ChatRequest(
             profile: profile, apiKey: apiKey, systemPrompt: action.systemPrompt,
-            messages: history, overrides: action.overrides)
+            messages: history,
+            overrides: mergedOverrides(for: action))
         let events = provider.stream(request)
         await coordinator.consume(events, into: session.id)
+        return session.id
+    }
+
+    /// 在专用会话里复用「最近一个匹配且空闲」的会话；进行中会话不参与复用，
+    /// 避免并发续写污染同一流。`sourceApp` 为 nil 时仅按 actionId 匹配。
+    private func dedicatedSession(for action: Action, sourceApp: String?) -> Session? {
+        sessionStore.sessions.first { candidate in
+            guard candidate.channel == .action,
+                candidate.actionId == action.id,
+                candidate.sourceApp == sourceApp,
+                !candidate.archived
+            else { return false }
+            return !coordinator.isStreaming(sessionId: candidate.id)
+        }
+    }
+
+    /// Action 级 `timeoutSec` 覆盖 profile 默认值，与 TOML overrides 表合并。
+    private func mergedOverrides(for action: Action) -> ParamOverrides? {
+        let base = action.overrides
+        guard action.timeoutSec != nil || base != nil else { return nil }
+        return ParamOverrides(
+            temperature: base?.temperature, maxTokens: base?.maxTokens, model: base?.model,
+            timeoutSec: action.timeoutSec)
     }
 
     private var lastCaptureResult: CaptureResult?
@@ -116,5 +150,15 @@ package final class ActionRunner {
             lastCaptureResult = result
             return result.text
         }
+    }
+}
+
+/// `ActionRunner` 是 `ActionExecutionUseCase` 的真实实现：捕获/模板/独立会话/
+/// 流执行/终态 checkpoint 全部经由此引擎，热键与 HTTP `/run` 共用。
+extension ActionRunner: ActionExecutionUseCase {
+    package func run(_ request: ActionExecutionRequest) async throws -> ActionExecutionResponse {
+        let sessionId = try await run(
+            actionId: request.actionId, overrideInput: request.overrideInput, sourcePID: nil)
+        return ActionExecutionResponse(sessionId: sessionId)
     }
 }

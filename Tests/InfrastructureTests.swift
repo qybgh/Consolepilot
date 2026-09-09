@@ -676,6 +676,108 @@ final class InfrastructureTests: XCTestCase {
     }
 
     @MainActor
+    func testActionRunnerReusesDedicatedSessionByActionAndSource() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ConsolepilotDedicatedAction-\(UUID().uuidString)", isDirectory: true)
+        let url = directory.appendingPathComponent("config.toml")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let configText = """
+            [general]
+            port = 8765
+            theme = "tokyo-night"
+            opacity = 0.92
+            scrollbackLines = 100000
+            [server]
+            authToken = "${env:CONSOLEPILOT_TEST_SECRET}"
+            [capture]
+            strategy = ["clipboard"]
+            maxInputChars = 40000
+            [[profiles]]
+            id = "local"
+            provider = "openai"
+            baseURL = "http://127.0.0.1:11434/v1"
+            model = "mock"
+            apiKey = ""
+            [[actions]]
+            id = "summarize"
+            name = "Summarize"
+            profile = "local"
+            userPrompt = "请总结：{{input}}"
+            input = "prompt"
+            sessionMode = "dedicated"
+            timeoutSec = 30
+            """
+        try configText.write(to: url, atomically: true, encoding: .utf8)
+        let config = try ConfigStore(loader: ConfigLoader(configURL: url))
+        let database = try AppDatabase(path: directory.appendingPathComponent("db.sqlite").path)
+        let sessions = try SessionStore(database: database)
+        let coordinator = StreamCoordinator(sessionStore: sessions, usageStore: UsageStore(database: database))
+        let runner = ActionRunner(
+            config: config, capture: TextCaptureService(config: config.current.capture),
+            secrets: SecretResolver(), providers: [.openai: MockAIProvider(delay: .zero)],
+            coordinator: coordinator, sessionStore: sessions)
+
+        let first = try await runner.run(actionId: "summarize", overrideInput: "第一轮")
+        let second = try await runner.run(actionId: "summarize", overrideInput: "第二轮")
+
+        XCTAssertEqual(first, second, "dedicated 会话应按 actionId+sourceApp 复用")
+        XCTAssertEqual(sessions.sessions.count, 1)
+        let users = sessions.history(sessionId: first).filter { $0.role == .user }
+        XCTAssertEqual(users.map(\.content), ["请总结：第一轮", "请总结：第二轮"])
+        let assistants = sessions.history(sessionId: first).filter { $0.role == .assistant }
+        XCTAssertEqual(assistants.count, 2, "每轮续写都应产生一条助手回复")
+    }
+
+    @MainActor
+    func testActionRunnerImplementsActionExecutionUseCaseContract() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ConsolepilotUseCase-\(UUID().uuidString)", isDirectory: true)
+        let url = directory.appendingPathComponent("config.toml")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let configText = """
+            [general]
+            port = 8765
+            theme = "tokyo-night"
+            opacity = 0.92
+            scrollbackLines = 100000
+            [server]
+            authToken = "${env:CONSOLEPILOT_TEST_SECRET}"
+            [capture]
+            strategy = ["clipboard"]
+            maxInputChars = 40000
+            [[profiles]]
+            id = "local"
+            provider = "openai"
+            baseURL = "http://127.0.0.1:11434/v1"
+            model = "mock"
+            apiKey = ""
+            [[actions]]
+            id = "summarize"
+            name = "Summarize"
+            profile = "local"
+            userPrompt = "请总结：{{input}}"
+            input = "prompt"
+            """
+        try configText.write(to: url, atomically: true, encoding: .utf8)
+        let config = try ConfigStore(loader: ConfigLoader(configURL: url))
+        let database = try AppDatabase(path: directory.appendingPathComponent("db.sqlite").path)
+        let sessions = try SessionStore(database: database)
+        let coordinator = StreamCoordinator(sessionStore: sessions, usageStore: UsageStore(database: database))
+        let runner = ActionRunner(
+            config: config, capture: TextCaptureService(config: config.current.capture),
+            secrets: SecretResolver(), providers: [.openai: MockAIProvider(delay: .zero)],
+            coordinator: coordinator, sessionStore: sessions)
+        let useCase: any ActionExecutionUseCase = runner
+
+        let response = try await useCase.run(
+            ActionExecutionRequest(actionId: "summarize", overrideInput: "契约输入"))
+
+        XCTAssertEqual(response.sessionId, sessions.sessions.first?.id)
+        XCTAssertEqual(
+            sessions.history(sessionId: response.sessionId).first?.content, "请总结：契约输入")
+    }
+
+    @MainActor
     func testCaptureLogStorePersistsMetadataWithoutCapturedText() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ConsolepilotCaptureLog-\(UUID().uuidString)", isDirectory: true)

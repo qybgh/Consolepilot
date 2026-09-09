@@ -5,7 +5,7 @@ import Foundation
 struct RequestBuilder {
     func buildOpenAI(_ request: ChatRequest) throws -> URLRequest {
         var urlRequest = try makeRequest(url: request.profile.baseURL, path: "chat/completions", apiKey: request.apiKey)
-        urlRequest.timeoutInterval = TimeInterval(request.profile.timeoutSec)
+        urlRequest.timeoutInterval = TimeInterval(request.overrides?.timeoutSec ?? request.profile.timeoutSec)
         let model = request.overrides?.model ?? request.profile.model
         var messages = request.messages.map {
             OpenAICompatMessage(role: $0.role.rawValue, content: $0.content)
@@ -24,7 +24,7 @@ struct RequestBuilder {
 
     func buildAnthropic(_ request: ChatRequest) throws -> URLRequest {
         var urlRequest = try makeRequest(url: request.profile.baseURL, path: "messages", apiKey: request.apiKey)
-        urlRequest.timeoutInterval = TimeInterval(request.profile.timeoutSec)
+        urlRequest.timeoutInterval = TimeInterval(request.overrides?.timeoutSec ?? request.profile.timeoutSec)
         let model = request.overrides?.model ?? request.profile.model
         let messages = request.messages.filter { $0.role != .system }.map {
             AnthropicChatMessage(role: $0.role == .assistant ? "assistant" : "user", content: $0.content)
@@ -54,7 +54,6 @@ struct RequestBuilder {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-        request.timeoutInterval = 120
         return request
     }
 }
