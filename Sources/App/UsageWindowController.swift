@@ -56,8 +56,8 @@ final class UsageWindowController: NSWindowController {
     func showWindow() {
         refreshSnapshot()
         window?.center()
-        window?.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+        // 用量窗口只由用户主动打开（菜单/状态栏），可激活应用。
+        WindowActivationPolicy.present(window, cause: .userInitiated)
     }
 
     @objc private func refreshSnapshot() {

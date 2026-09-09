@@ -1,95 +1,32 @@
-import AppKit
-import ConsolepilotCore
-import Foundation
+import SwiftUI
 
-@MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
-    private var windowController: ConsoleWindowController?
-    private var localServer: LocalServer?
-    private var settingsWindowController: SettingsWindowController?
-    private var usageWindowController: UsageWindowController?
-    private var menuBarController: MenuBarController?
+/// Consolepilot 的 SwiftUI 入口（P0-B 起替代 AppKit `ConsolepilotMain`）。
+///
+/// 场景结构：
+/// - `WindowGroup("main")`：主窗口，内容为 `RootHostView`（经 NSViewRepresentable
+///   承载既有 AppKit `ConsolepilotRootView`，引擎根视图由协调器持有、
+///   跨窗口重建存活）。
+/// - `Settings`：系统设置场景（⌘,），内容为 `SettingsEditorView` 的
+///   representable 包装。
+///
+/// 主窗口关闭后由 SwiftUI 原生处理 Dock 重新唤起（重建窗口并重新挂载
+/// 同一引擎），因此移除 File > New Window，保证始终只有一个主窗口。
+/// 生命周期与菜单/状态栏接线全部在 `AppDelegate`（见 `AppDelegate.swift`）。
+@main
+struct ConsolepilotApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
-    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        // Persist any partially received responses before the process exits.
-        // Streams are intentionally not resumed automatically; their durable
-        // interrupted checkpoint remains visible after relaunch.
-        windowController?.persistActiveStreams()
-        return .terminateNow
-    }
-
-    func applicationDidFinishLaunching(_ notification: Notification) {
-        let controller = ConsoleWindowController()
-        controller.showWindow()
-        windowController = controller
-        ApplicationMenu.updateProfiles(controller.configuredProfiles())
-        controller.setProfilesChangedHandler { profiles in
-            ApplicationMenu.updateProfiles(profiles)
+    var body: some Scene {
+        WindowGroup("Consolepilot", id: "main") {
+            RootHostView()
         }
-        menuBarController = MenuBarController(
-            show: { [weak self] in self?.showMainWindow(nil) },
-            settings: { [weak self] in self?.openSettings(nil) },
-            quit: { NSApp.terminate(nil) })
-    }
-
-    func applicationShouldHandleReopen(
-        _ sender: NSApplication,
-        hasVisibleWindows flag: Bool
-    ) -> Bool {
-        if !flag {
-            showMainWindow(nil)
+        .windowResizability(.contentMinSize)
+        .commands {
+            // 单主窗口应用：隐藏 File > New Window，避免多窗口各自承载引擎。
+            CommandGroup(replacing: .newItem) {}
         }
-        return true
-    }
-
-    @objc func showMainWindow(_ sender: Any?) {
-        windowController?.showWindow()
-    }
-
-    @objc func openSettings(_ sender: Any? = nil) {
-        if settingsWindowController == nil {
-            settingsWindowController = SettingsWindowController()
-        }
-        settingsWindowController?.showWindow()
-    }
-
-    @objc func openAccessibilitySettings(_ sender: Any? = nil) {
-        PermissionChecker.openAccessibilitySettings()
-    }
-
-    @objc func openUsage(_ sender: Any? = nil) {
-        guard let windowController else { return }
-        if usageWindowController == nil {
-            usageWindowController = UsageWindowController(snapshot: { [weak windowController] in
-                windowController?.usageSummaryText() ?? "用量统计暂不可用"
-            })
-        }
-        usageWindowController?.showWindow()
-    }
-
-    @objc func selectProfile(_ sender: NSMenuItem) {
-        guard let id = sender.representedObject as? String else { return }
-        windowController?.selectProfile(id: id)
-    }
-
-    @objc func quickAsk(_ sender: Any? = nil) {
-        guard let windowController, let window = windowController.window else { return }
-        let alert = NSAlert()
-        alert.messageText = "快速提问"
-        alert.informativeText = "输入问题后发送到当前 Consolepilot 会话。"
-        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 360, height: 24))
-        field.placeholderString = "请输入问题"
-        alert.accessoryView = field
-        alert.addButton(withTitle: "发送")
-        alert.addButton(withTitle: "取消")
-        alert.beginSheetModal(for: window) { [weak windowController, weak field] response in
-            guard response == .alertFirstButtonReturn, let prompt = field?.stringValue else { return }
-            windowController?.quickAsk(prompt)
+        Settings {
+            SettingsSceneView()
         }
     }
-
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        false
-    }
-
 }

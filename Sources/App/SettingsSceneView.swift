@@ -1,8 +1,57 @@
 import AppKit
 import ConsolepilotCore
+import SwiftUI
 
+/// SwiftUI `Settings` 场景内容：承载 TOML 配置编辑器。
+struct SettingsSceneView: NSViewRepresentable {
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    func makeNSView(context: Context) -> NSView {
+        let editor = SettingsEditorView(
+            frame: NSRect(origin: .zero, size: SettingsWindowLayout.preferredContentSize))
+        context.coordinator.editor = editor
+        return editor
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {}
+
+    @MainActor
+    final class Coordinator {
+        weak var editor: SettingsEditorView?
+    }
+}
+
+/// Settings 窗口在窄屏/小屏上的尺寸适配规则（纯计算，便于单元测试）。
+enum SettingsWindowLayout {
+    /// 屏幕可见区域四周预留的边距。
+    static let margin: CGFloat = 16
+    /// 编辑器理想内容尺寸（宽屏下的初始尺寸）。
+    static let preferredContentSize = NSSize(width: 880, height: 640)
+    /// 编辑器可接受的最小内容尺寸（保证按钮区/状态栏不丢失）。
+    static let minimumContentSize = NSSize(width: 420, height: 320)
+
+    /// 可见区域内可容纳的最大内容尺寸。
+    static func availableContentSize(in visibleFrame: NSRect) -> NSSize {
+        NSSize(
+            width: max(0, visibleFrame.width - margin * 2),
+            height: max(0, visibleFrame.height - margin * 2))
+    }
+
+    /// 目标内容尺寸：屏幕放得下用 `ideal`；放不下收敛到 `available`；
+    /// 任何情况下不小于 `minimum`（除非 `available` 本身更小）。
+    static func fittedContentSize(ideal: NSSize, available: NSSize, minimum: NSSize) -> NSSize {
+        NSSize(
+            width: min(max(ideal.width, minimum.width), available.width),
+            height: min(max(ideal.height, minimum.height), available.height))
+    }
+}
+
+/// TOML 配置编辑器：由原 AppKit 设置窗口内容抽取，去掉窗口级
+/// 职责（显示/激活），供 SwiftUI Settings 场景直接承载。负责在窗口挂载、
+/// 成为 key 或更换屏幕时，把窗口尺寸收敛到当前屏幕可见区域（窄屏/竖屏
+/// 下按钮与滚动条不落到屏幕外）。
 @MainActor
-final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTextViewDelegate {
+final class SettingsEditorView: NSView, NSTextViewDelegate {
     private let textView = NSTextView(frame: .zero)
     private let statusLabel = NSTextField(labelWithString: "")
     private let saveButton = NSButton(title: "保存更改", target: nil, action: nil)
@@ -11,29 +60,127 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private var configURL: URL?
     private var isDirty = false
     private var isLoading = false
-    private var hasPresentedWindow = false
     private let referenceMarker = "# --- Consolepilot 高级配置参考（可复制后取消注释） ---"
 
-    init() {
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 900, height: 650), styleMask: [.titled, .closable, .resizable],
-            backing: .buffered, defer: false)
-        window.minSize = NSSize(width: 420, height: 360)
-        window.title = "Consolepilot 设置"
-        window.isReleasedWhenClosed = false
-        super.init(window: window)
-        window.delegate = self
-        configure()
-        loadConfig()
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        wantsLayer = true
+        layer?.backgroundColor = NSColor(calibratedWhite: 0.08, alpha: 1).cgColor
+        configureSubviews()
     }
 
     required init?(coder: NSCoder) { nil }
 
-    private func configure() {
-        guard let content = window?.contentView else { return }
-        content.wantsLayer = true
-        content.layer?.backgroundColor = NSColor(calibratedWhite: 0.08, alpha: 1).cgColor
+    override var intrinsicContentSize: NSSize {
+        // SwiftUI 以理想尺寸决定 Settings 窗口的初始大小；若布局发生在窗口
+        // 已挂载且屏幕放不下理想尺寸时（窄屏/竖屏），直接返回收敛后的尺寸，
+        // 避免窗口首帧就超出屏幕。
+        guard let window, let screen = window.screen else {
+            return SettingsWindowLayout.preferredContentSize
+        }
+        let available = SettingsWindowLayout.availableContentSize(in: screen.visibleFrame)
+        return SettingsWindowLayout.fittedContentSize(
+            ideal: SettingsWindowLayout.preferredContentSize,
+            available: available,
+            minimum: SettingsWindowLayout.minimumContentSize)
+    }
 
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        updateWindowObservation()
+        // 每次（重新）挂载到窗口时：无未保存草稿则读取磁盘配置，保证与
+        // 主窗口的热重载一致；存在未保存草稿则保留，避免覆盖用户编辑。
+        if window != nil, !isDirty {
+            loadConfig()
+        }
+        // SwiftUI 完成首帧布局后再收敛一次尺寸（此刻窗口可能尚未可见，
+        // 之后的收敛以成为 key / 换屏通知为准）。
+        Task { @MainActor in
+            self.fitToVisibleScreenIfNeeded()
+        }
+    }
+
+    // MARK: - 窗口尺寸适配（窄屏/小屏）
+
+    private weak var observedWindow: NSWindow?
+    private var windowObservers: [NSObjectProtocol] = []
+
+    /// 跟随窗口的「成为 key / 更换屏幕」通知，及时把窗口收敛进可见区域。
+    private func updateWindowObservation() {
+        guard let window else {
+            removeWindowObservation()
+            return
+        }
+        guard observedWindow !== window else { return }
+        removeWindowObservation()
+        observedWindow = window
+        let center = NotificationCenter.default
+        windowObservers = [
+            center.addObserver(
+                forName: NSWindow.didBecomeKeyNotification, object: window, queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor in
+                    self?.fitToVisibleScreenIfNeeded()
+                    // SwiftUI 可能在窗口成为 key 后才按理想尺寸重建 frame，
+                    // 延迟再收敛一次，避免被覆盖。
+                    do {
+                        try await Task.sleep(for: .milliseconds(400))
+                    } catch {
+                        return
+                    }
+                    self?.fitToVisibleScreenIfNeeded()
+                }
+            },
+            center.addObserver(
+                forName: NSWindow.didChangeScreenNotification, object: window, queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor in
+                    self?.fitToVisibleScreenIfNeeded()
+                }
+            },
+        ]
+    }
+
+    private func removeWindowObservation() {
+        windowObservers.forEach(NotificationCenter.default.removeObserver)
+        windowObservers = []
+        observedWindow = nil
+    }
+
+    /// 当窗口超出所在屏幕可见区域（窄屏/竖屏/小屏）时，把内容尺寸收敛到
+    /// 可见区域并整体移回屏幕内（顶部对齐，保证标题栏可拖拽）。宽屏或
+    /// 用户已手动调小时不干预。
+    private func fitToVisibleScreenIfNeeded() {
+        guard let window, window.isVisible else { return }
+        guard let screen = window.screen ?? Self.screenContaining(window) else { return }
+        let visibleFrame = screen.visibleFrame
+        let available = SettingsWindowLayout.availableContentSize(in: visibleFrame)
+        let currentContent = window.contentRect(forFrameRect: window.frame).size
+        guard currentContent.width > available.width || currentContent.height > available.height else {
+            return
+        }
+        let contentSize = SettingsWindowLayout.fittedContentSize(
+            ideal: SettingsWindowLayout.preferredContentSize,
+            available: available,
+            minimum: SettingsWindowLayout.minimumContentSize)
+        var frame = window.frameRect(forContentRect: NSRect(origin: .zero, size: contentSize))
+        frame.origin.x = visibleFrame.midX - frame.width / 2
+        frame.origin.y = visibleFrame.maxY - frame.height
+        window.setFrame(frame, display: true)
+        // 允许用户在窄屏上继续缩小（SwiftUI 默认最小尺寸可能大于可见区域）。
+        window.contentMinSize = SettingsWindowLayout.fittedContentSize(
+            ideal: SettingsWindowLayout.minimumContentSize,
+            available: available,
+            minimum: .zero)
+    }
+
+    private static func screenContaining(_ window: NSWindow) -> NSScreen? {
+        NSScreen.screens.first { $0.visibleFrame.intersects(window.frame) }
+    }
+
+    // MARK: - 子视图布局
+
+    private func configureSubviews() {
         let editorScroll = NSScrollView()
         editorScroll.translatesAutoresizingMaskIntoConstraints = false
         editorScroll.documentView = textView
@@ -93,70 +240,29 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         statusLabel.font = NSFont.systemFont(ofSize: 11)
         statusLabel.lineBreakMode = .byTruncatingMiddle
 
-        content.addSubview(editorScroll)
-        content.addSubview(saveButton)
-        content.addSubview(discardButton)
-        content.addSubview(reloadButton)
-        content.addSubview(statusLabel)
         let buttonStack = NSStackView(views: [saveButton, discardButton, reloadButton])
         buttonStack.translatesAutoresizingMaskIntoConstraints = false
         buttonStack.orientation = .horizontal
         buttonStack.spacing = 8
-        content.addSubview(buttonStack)
-        saveButton.removeFromSuperview()
-        discardButton.removeFromSuperview()
-        reloadButton.removeFromSuperview()
-        buttonStack.addArrangedSubview(saveButton)
-        buttonStack.addArrangedSubview(discardButton)
-        buttonStack.addArrangedSubview(reloadButton)
+
+        addSubview(editorScroll)
+        addSubview(buttonStack)
+        addSubview(statusLabel)
         NSLayoutConstraint.activate([
-            editorScroll.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 14),
-            editorScroll.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -14),
-            editorScroll.topAnchor.constraint(equalTo: content.topAnchor, constant: 14),
+            editorScroll.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 14),
+            editorScroll.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -14),
+            editorScroll.topAnchor.constraint(equalTo: topAnchor, constant: 14),
             editorScroll.bottomAnchor.constraint(equalTo: buttonStack.topAnchor, constant: -8),
             buttonStack.leadingAnchor.constraint(equalTo: editorScroll.leadingAnchor),
             buttonStack.bottomAnchor.constraint(equalTo: statusLabel.topAnchor, constant: -6),
             statusLabel.leadingAnchor.constraint(equalTo: editorScroll.leadingAnchor),
             statusLabel.trailingAnchor.constraint(equalTo: editorScroll.trailingAnchor),
-            statusLabel.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -10),
+            statusLabel.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -10),
             statusLabel.heightAnchor.constraint(equalToConstant: 18),
         ])
     }
 
-    func showWindow() {
-        if !isDirty { loadConfig() }
-        // Force the first layout pass before ordering the window front. This
-        // avoids a partially painted text view until the first click/scroll.
-        window?.contentView?.layoutSubtreeIfNeeded()
-        textView.layoutSubtreeIfNeeded()
-        if let window { fitWindowToVisibleScreen(window, centerInitially: !hasPresentedWindow) }
-        window?.makeKeyAndOrderFront(nil)
-        window?.displayIfNeeded()
-        NSApp.activate(ignoringOtherApps: true)
-        window?.makeFirstResponder(textView)
-        hasPresentedWindow = true
-    }
-
-    private func fitWindowToVisibleScreen(_ window: NSWindow, centerInitially: Bool) {
-        guard let screen = window.screen ?? NSScreen.main else { return }
-        let visible = screen.visibleFrame.insetBy(dx: 12, dy: 12)
-        window.minSize = NSSize(
-            width: min(window.minSize.width, visible.width),
-            height: min(window.minSize.height, visible.height))
-        var frame = window.frame
-        frame.size.width = min(frame.width, visible.width)
-        frame.size.height = min(frame.height, visible.height)
-        if centerInitially {
-            frame.origin.x = visible.midX - frame.width / 2
-            frame.origin.y = visible.midY - frame.height / 2
-        } else {
-            if frame.maxX > visible.maxX { frame.origin.x = visible.maxX - frame.width }
-            if frame.minX < visible.minX { frame.origin.x = visible.minX }
-            if frame.maxY > visible.maxY { frame.origin.y = visible.maxY - frame.height }
-            if frame.minY < visible.minY { frame.origin.y = visible.minY }
-        }
-        window.setFrame(frame, display: false)
-    }
+    // MARK: - 配置读写
 
     func textDidChange(_ notification: Notification) {
         guard !isLoading else { return }
@@ -203,9 +309,6 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             let message = Self.userFacingConfigError("保存失败", error)
             statusLabel.stringValue = message
             statusLabel.toolTip = message
-            // Validation errors leave the editor open and preserve the draft.
-            window?.makeKeyAndOrderFront(nil)
-            window?.displayIfNeeded()
             updateButtonState()
         }
     }
@@ -221,29 +324,6 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         saveButton.isEnabled = isDirty
         discardButton.isEnabled = isDirty
         reloadButton.isEnabled = !isDirty
-        window?.title = isDirty ? "Consolepilot 设置 · 未保存" : "Consolepilot 设置"
-    }
-
-    private func glossaryText() -> NSAttributedString {
-        let text = """
-            # Consolepilot 配置（中文说明）
-            # [general] 通用设置
-            # 端口、主题、不透明度、置顶、字体、字号、滚动缓冲、登录启动、呼出快捷键
-            # [server] 本地服务设置：鉴权引用和请求体上限
-            # [capture] 文本捕获设置：策略顺序、剪贴板等待、恢复和长度限制
-            # [[profiles]] Provider：id、provider、baseURL、model、apiKey、temperature、maxTokens、timeoutSec、
-            # priceInput、priceOutput
-            # [[actions]] Action：id、name、hotkey、profile、systemPrompt、userPrompt、input、attachTo、autoShow、
-            # notifyOnDone、overrides
-            # [[tails]] 日志尾随：path、enabled、format、fromEnd
-            # 密钥只能使用 ${keychain:name} 或 ${env:VAR}，禁止明文写入。
-            # 右侧是标准文本编辑器，可鼠标点击、拖选、复制粘贴、撤销并滚动。
-            """
-        let result = NSMutableAttributedString(string: text)
-        result.addAttributes(
-            [.font: NSFont.systemFont(ofSize: 12), .foregroundColor: NSColor(calibratedWhite: 0.68, alpha: 1)],
-            range: NSRange(location: 0, length: result.length))
-        return result
     }
 
     private var advancedReference: String {
@@ -287,15 +367,5 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         # format = "text"
         # fromEnd = true
         """
-    }
-
-    func windowShouldClose(_ sender: NSWindow) -> Bool {
-        guard isDirty else { return true }
-        let alert = NSAlert()
-        alert.messageText = "设置尚未保存"
-        alert.informativeText = "关闭前要放弃当前修改吗？"
-        alert.addButton(withTitle: "放弃修改")
-        alert.addButton(withTitle: "继续编辑")
-        return alert.runModal() == .alertFirstButtonReturn
     }
 }

@@ -760,6 +760,9 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
             let response = await performExternalAsk(payload.prompt)
             return (200, Data(response.utf8))
         case "/open":
+            // `/open` 是用户显式命令（CLI/HTTP），语义等价 userInitiated：
+            // 允许激活。P0-B 的 WindowActivationPolicy 位于 App 层，Core 不
+            // 反向依赖；P1-A 把本视图迁入 App 层后统一走策略入口。
             window?.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
             return (200, Data("ok".utf8))
