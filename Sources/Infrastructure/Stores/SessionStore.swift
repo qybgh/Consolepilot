@@ -158,7 +158,11 @@ package final class SessionStore {
         else { return }
         sessions[index].updatedAt = date
         let record = SessionRecord(sessions[index])
-        try? database.writer.write { db in try record.update(db) }
+        do {
+            try database.writer.write { db in try record.update(db) }
+        } catch {
+            Log.error("推进会话 updatedAt 落库失败：\(error)", category: .domain)
+        }
         sortSessions()
     }
 
