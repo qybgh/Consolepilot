@@ -12,3 +12,7 @@ dist/
 config.toml
 *.secret.toml
 .env
+
+# IntelliJ / AppCode project files
+.idea/
+*.iml
