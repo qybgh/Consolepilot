@@ -62,8 +62,10 @@ final class ChatTranscriptView: NSView {
         private let theme: Theme
         private var cachedWidth: CGFloat = -1
         private var cachedSize: NSSize = .zero
-        private var bodyRightInset: CGFloat = 24
         private var isWaitingForFirstDelta = false
+        // 气泡内部左右统一留白。复制按钮位于头部行后，正文无需再为右下角
+        // 控件预留整列，文本列可尽量占满气泡宽度、减少窄屏下的换行。
+        private let horizontalPadding: CGFloat = 10
 
         init(header: MessageHeader, theme: Theme) {
             role = header.role
@@ -156,7 +158,8 @@ final class ChatTranscriptView: NSView {
                 let line = CTLineCreateWithAttributedString(content)
                 let intrinsicWidth =
                     ceil(
-                        CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil))) + 24
+                        CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil)))
+                    + horizontalPadding * 2 + 2
                 // 只有真正能放进一行的短消息才按内容收缩；一旦需要换行，
                 // 直接使用固定的完整可用宽度，避免长对话留下无意义的侧边空白。
                 width = ChatBubbleWidthPolicy.resolve(
@@ -166,11 +169,7 @@ final class ChatTranscriptView: NSView {
                 width = ChatBubbleWidthPolicy.resolve(
                     containsLineBreak: true, intrinsicSingleLineWidth: 0, maxWidth: maxWidth)
             }
-            // Reserve the lower-right control's column in full-width bubbles
-            // so a final line can never draw underneath the copy button. Keep
-            // compact one-line bubbles at their natural width.
-            bodyRightInset = width >= maxWidth - 0.5 ? 48 : 24
-            let bodyWidth = max(1, width - 12 - bodyRightInset)
+            let bodyWidth = max(1, width - horizontalPadding * 2)
             guard let textContainer = bodyView.textContainer,
                 let layoutManager = bodyView.layoutManager
             else { return NSSize(width: width, height: 58) }
@@ -183,20 +182,23 @@ final class ChatTranscriptView: NSView {
             layoutManager.ensureLayout(for: textContainer)
             let textHeight = layoutManager.usedRect(for: textContainer).height
             cachedWidth = maxWidth
-            // The copy affordance floats over the bubble's lower-right padding;
-            // it must not reserve a separate line below the message body.
+            // Copy 按钮位于头部行，不占用正文区域；高度只需容纳正文与少量
+            // 上下呼吸空间，不为右下角控件预留额外整行。
             cachedSize = NSSize(width: width, height: max(58, ceil(textHeight) + 40))
             return cachedSize
         }
 
         override func layout() {
             super.layout()
-            roleLabel.frame = NSRect(x: 12, y: 10, width: max(1, bounds.width - 52), height: 15)
+            roleLabel.frame = NSRect(
+                x: horizontalPadding, y: 10,
+                width: max(1, bounds.width - horizontalPadding - 34), height: 15)
             bodyView.frame = NSRect(
-                x: 12, y: 31,
-                width: max(1, bounds.width - 12 - bodyRightInset),
+                x: horizontalPadding, y: 31,
+                width: max(1, bounds.width - horizontalPadding * 2),
                 height: max(1, bounds.height - 40))
-            copyButton.frame = NSRect(x: bounds.width - 30, y: bounds.height - 25, width: 18, height: 18)
+            copyButton.frame = NSRect(
+                x: bounds.width - horizontalPadding - 18, y: 9, width: 18, height: 18)
         }
 
         @objc private func copyMessage() {
@@ -258,7 +260,7 @@ final class ChatTranscriptView: NSView {
     var onLoadEarlier: (() -> [Message])?
     private let theme: Theme
     private let gap: CGFloat = 12
-    private let inset: CGFloat = 16
+    private let inset: CGFloat = 12
 
     init(theme: Theme) {
         self.theme = theme

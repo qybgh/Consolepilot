@@ -72,6 +72,21 @@ final class RenderingTests: XCTestCase {
         XCTAssertNotNil(rendered.attribute(.backgroundColor, at: inlineRange.location, effectiveRange: nil))
     }
 
+    func testCodeBlockKeepsCompactHorizontalInsets() {
+        // 气泡内文本列紧凑后，代码块段落的左右缩进必须保持很小，
+        // 避免在窄屏上进一步收窄代码行导致更多换行。
+        let theme = Theme.registry["tokyo-night"]!
+        let rendered = MarkdownMessageRenderer.render(
+            "```swift\nlet value = 42\n```", theme: theme)
+        let range = (rendered.string as NSString).range(of: "let value = 42")
+        let style =
+            rendered.attribute(.paragraphStyle, at: range.location, effectiveRange: nil)
+            as? NSParagraphStyle
+        XCTAssertNotNil(style)
+        XCTAssertLessThanOrEqual(style?.headIndent ?? .greatestFiniteMagnitude, 8)
+        XCTAssertGreaterThanOrEqual(style?.tailIndent ?? -.greatestFiniteMagnitude, -8)
+    }
+
     func testScrollbackTrimmerRemovesWholeLinesInBatch() {
         let storage = NSMutableAttributedString(string: (0..<20_000).map { "line\($0)\n" }.joined())
         ScrollbackTrimmer(maxLines: 10_000).trim(storage)

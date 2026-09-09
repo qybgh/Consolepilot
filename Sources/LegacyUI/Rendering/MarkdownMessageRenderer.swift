@@ -29,9 +29,9 @@ enum MarkdownMessageRenderer {
 
     private static func codeLine(_ line: String, theme: Theme) -> NSAttributedString {
         let paragraph = NSMutableParagraphStyle()
-        paragraph.headIndent = 10
-        paragraph.firstLineHeadIndent = 10
-        paragraph.tailIndent = -10
+        paragraph.headIndent = 8
+        paragraph.firstLineHeadIndent = 8
+        paragraph.tailIndent = -8
         paragraph.paragraphSpacingBefore = 2
         paragraph.paragraphSpacing = 2
         return NSAttributedString(
