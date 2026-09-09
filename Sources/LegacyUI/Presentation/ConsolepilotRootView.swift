@@ -85,7 +85,7 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
         configure()
         trackExternalFrontmostApplication()
         installLocalInterruptMonitor()
-        configureMockRuntime()
+        configureRuntime()
     }
 
     required init?(coder: NSCoder) { nil }
@@ -533,7 +533,7 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
         splitView.setPosition(target, ofDividerAt: 0)
     }
 
-    private func configureMockRuntime() {
+    private func configureRuntime() {
         do {
             let store = try ConfigStore()
             configStore = store
@@ -563,9 +563,9 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
                 let hasRemoteProfile = store.current.profiles.contains {
                     $0.provider == kind && !Self.isLoopback($0.baseURL)
                 }
-                // Real network access is opt-in. Acceptance builds stay on the
-                // deterministic Mock provider unless the user explicitly sets
-                // CONSOLEPILOT_ENABLE_REAL_PROVIDER=1 in the launching shell.
+                // 远程访问按配置显式开启（general.allowRealProvider=true）：
+                // 默认配置关闭真实 Provider，回环地址与未开启时一律使用本地
+                // Mock，避免验收或误配置消耗 Token。
                 guard hasRemoteProfile, store.current.general.allowRealProvider else { return mockProvider }
                 switch kind {
                 case .openai: return OpenAICompatibleProvider()
@@ -694,14 +694,15 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
             if let currentId = sessions.currentId {
                 showSession(currentId)
             } else {
+                let profile = selectedProfile()
                 renderer.appendHeader(
                     MessageHeader(
-                        timestamp: Date(), role: .system, channel: .console, model: "mock-stream-v1",
+                        timestamp: Date(), role: .system, channel: .console, model: profile.model,
                         sourceApp: nil))
                 renderer.append(
                     TokenBatch(
                         sessionId: "welcome",
-                        text: "Consolepilot Mock 验收模式已启动\n输入消息后按 Enter，不会消耗 API Token。\n",
+                        text: Self.welcomeText(profile: profile, localMock: isLocalMockMode()),
                         deltaCount: 1))
             }
             updateReadyStatus()
@@ -1081,7 +1082,7 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
         renderer.showStreamingLoading()
         inputView.string = ""
         inputView.isEditable = false
-        statusLabel.stringValue = "Mock 正在流式生成 · 可切换会话 · ⌃C 中断"
+        statusLabel.stringValue = streamingStatusText()
         reloadSessionButtons()
         let profile = selectedProfile()
         let history = sessionStore.messages.map { ChatMessage(role: $0.role, content: $0.content) }
@@ -1183,10 +1184,38 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
             || coordinator?.isStreaming(sessionId: currentId) == true
         inputView.isEditable = !streaming
         if streaming {
-            statusLabel.stringValue = "Mock 正在流式生成 · 可切换会话 · ⌃C 中断"
+            statusLabel.stringValue = streamingStatusText()
         } else {
             updateReadyStatus()
         }
+    }
+
+    /// 当前所选 Profile 的实际执行模式是否走本地 Mock（与 provider 选择逻辑一致）：
+    /// 回环地址始终本地；远程 Profile 仅在 allowRealProvider=true 时访问真实 API。
+    private func isLocalMockMode() -> Bool {
+        guard let store = configStore,
+            let profile = store.current.profile(id: selectedProfileId)
+        else { return true }
+        if Self.isLoopback(profile.baseURL) { return true }
+        return !store.current.general.allowRealProvider
+    }
+
+    /// 流式生成期间的状态栏文案：真实 Provider 时不标注 Mock。
+    private func streamingStatusText() -> String {
+        if isLocalMockMode() {
+            return "Mock 正在流式生成 · 可切换会话 · ⌃C 中断"
+        }
+        return "正在生成 · Profile \(selectedProfileId) · 可切换会话 · ⌃C 中断"
+    }
+
+    /// 首个会话欢迎语：按实际模式如实说明，避免“验收/Mock”与真实 Provider 矛盾。
+    private static func welcomeText(profile: Profile, localMock: Bool) -> String {
+        if localMock {
+            return "Consolepilot 已就绪 · 本地 Mock（不会访问真实 API）\n输入消息后按 Enter 即可开始。\n"
+        }
+        return
+            "Consolepilot 已就绪 · Profile「\(profile.id)」将访问真实 API（model \(profile.model)）\n"
+            + "请确认密钥与用量配置正确；输入消息后按 Enter 即可开始。\n"
     }
 
     private func updateReadyStatus() {
