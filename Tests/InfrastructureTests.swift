@@ -951,19 +951,52 @@ final class InfrastructureTests: XCTestCase {
         }
     }
 
-    // MARK: - 出厂默认配置洁净度
+    // MARK: - 出厂默认配置：洁净、可发现、无过期字段
 
-    func testBundledDefaultConfigContainsNoRemovedFieldsOrExampleBlocks() throws {
+    func testBundledDefaultConfigIsCleanDiscoverableAndFreeOfRemovedFields() throws {
         let url = try XCTUnwrap(ConfigLoader.bundledDefaultConfigURL())
         let text = try String(contentsOf: url, encoding: .utf8)
-        for token in [
-            "launchAtLogin", "toggleHotkey", "attachTo", "[[tails]]", "高级配置参考", "[[profiles]]", "[[actions]]",
-        ] {
+        // 已移除/过期字段必须零残留（含注释示例），避免旧示例误导用户。
+        for token in ["launchAtLogin", "toggleHotkey", "attachTo", "tails", "TailConfig", "高级配置参考"] {
             XCTAssertFalse(text.contains(token), "出厂默认配置不得包含 \(token)")
         }
-        // 每个配置项至多一行说明注释：注释行数不超过键值行数，且无空示例段。
-        let lines = text.split(separator: "\n", omittingEmptySubsequences: false)
-        let commentLines = lines.filter { $0.hasPrefix("#") }.count
-        XCTAssertLessThanOrEqual(commentLines, 30, "默认配置注释应保持精简")
+        // 可发现性：所有可配置 TOML 键都必须在文件中出现（生效键或整段注释示例），
+        // 用户即使不看文档也能知道全部可用设置项，不允许“隐藏设置”。
+        let visible = tomlKeys(in: text)
+        for key in [
+            "port", "theme", "opacity", "alwaysOnTop", "fontName", "fontSize", "compactFontSize",
+            "scrollbackLines", "allowRealProvider",
+            "authToken", "maxBodyBytes",
+            "strategy", "simulatedCopyWait", "restoreClipboard", "maxInputChars", "excludeBundleIds",
+            "id", "provider", "baseURL", "model", "apiKey", "temperature", "maxTokens", "timeoutSec",
+            "priceInput", "priceOutput",
+            "name", "hotkey", "profile", "systemPrompt", "userPrompt", "input", "sessionMode",
+            "autoShow", "notifyOnDone",
+        ] {
+            XCTAssertTrue(visible.contains(key), "默认配置缺少可用设置项示例：\(key)")
+        }
+        XCTAssertTrue(
+            text.contains("[actions.overrides]") || text.contains("overrides ="),
+            "默认配置缺少 overrides 参数覆盖示例")
+        // 首次安装安全：Profile/Action 示例以整段注释存在，不激活任何条目。
+        let active = text.split(separator: "\n")
+            .filter { !$0.hasPrefix("#") }
+            .joined(separator: "\n")
+        XCTAssertFalse(active.contains("[[profiles]]"))
+        XCTAssertFalse(active.contains("[[actions]]"))
+    }
+
+    /// 收集文本中所有 `key =` 形式的键名（注释行剥去行首 # 后同样识别）。
+    private func tomlKeys(in text: String) -> Set<String> {
+        var keys = Set<String>()
+        for rawLine in text.split(separator: "\n") {
+            var line = rawLine.trimmingCharacters(in: .whitespaces)
+            if line.hasPrefix("#") { line = String(line.dropFirst()) }
+            guard let equals = line.firstIndex(of: "=") else { continue }
+            let key = line[..<equals].trimmingCharacters(in: .whitespaces)
+                .prefix { $0.isLetter || $0.isNumber || $0 == "_" }
+            if !key.isEmpty { keys.insert(String(key)) }
+        }
+        return keys
     }
 }

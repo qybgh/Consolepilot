@@ -1,4 +1,5 @@
-# Consolepilot 默认配置。所有说明均为中文；密钥只能引用钥匙串或环境变量。
+# Consolepilot 默认配置。下方为生效的推荐值；文末附默认关闭的
+# Profile/Action 完整示例（取消整段注释并按需修改后才启用）。
 
 [general]
 # 本地 HTTP 服务监听端口（1024–65535）
@@ -11,13 +12,13 @@ opacity = 0.92
 alwaysOnTop = true
 # 正文字体名称
 fontName = "SF Mono"
-# 正文​​字号
+# 正文字号
 fontSize = 13
 # 窄屏模式字号
 compactFontSize = 11
 # 最多保留的滚动历史行数
 scrollbackLines = 100000
-# 是否允许远程 Profile 访问真实 API；默认关闭以避免验收期间消耗 Token
+# 是否允许远程 Profile 访问真实 API；默认关闭以避免消耗 Token
 allowRealProvider = false
 
 [server]
@@ -37,3 +38,36 @@ restoreClipboard = true
 maxInputChars = 40000
 # 不触发捕获的应用 Bundle ID
 excludeBundleIds = ["com.apple.keychainaccess", "com.agilebits.onepassword7"]
+
+# ==========================================================================
+# 可选：远程 Provider（Profile）——默认整段注释，取消注释并修改后启用
+# ==========================================================================
+# [[profiles]]
+# id = "openai-compatible"                 # 唯一标识（菜单“切换 Profile”显示）
+# provider = "openai"                      # openai（OpenAI 兼容）或 anthropic
+# baseURL = "https://api.example.com/v1"   # 远程地址；Anthropic 填 Messages API 根地址
+# model = "gpt-4o-mini"
+# apiKey = "${keychain:openai-compatible}" # 远程 Profile 必须引用密钥，禁止明文
+# temperature = 0.3                        # 采样温度（0–2）
+# maxTokens = 4096                         # 单次回复最大 token 数
+# timeoutSec = 120                         # 请求超时（秒），Action 可单独覆盖
+# priceInput = 0.005                       # 每 1K 输入 token 价格（用量统计用）
+# priceOutput = 0.015                      # 每 1K 输出 token 价格（用量统计用）
+
+# ==========================================================================
+# 可选：Action（跨应用后台动作）——默认整段注释，取消注释并修改后启用
+# input 支持：selection（选中文本）/ clipboard（剪贴板）/ prompt / none
+# ==========================================================================
+# [[actions]]
+# id = "explain-selection"
+# name = "解释选中内容"
+# hotkey = "cmd+shift+e"                   # 全局快捷键；双击可写成 cmd+c*2
+# profile = "openai-compatible"            # 指向某个 Profile 的 id
+# systemPrompt = "你是简洁的中文技术助手。"
+# userPrompt = "请解释下面这段内容：{{selection}}"
+# input = "selection"
+# sessionMode = "dedicated"                # 独立后台会话（当前唯一支持）
+# timeoutSec = 60                          # 可选：覆盖该 Profile 的 timeoutSec
+# autoShow = true                          # 完成后显示主窗口（不抢焦点）
+# notifyOnDone = true                      # 后台完成/失败时发送本地通知
+# [actions.overrides]                      # 可选：本次请求参数覆盖（model/temperature/maxTokens）
