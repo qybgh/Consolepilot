@@ -202,6 +202,11 @@ package final class StreamCoordinator {
     private func finish(_ context: Context, sessionId: String, state: MessageState) {
         guard !context.didFinish else { return }
         context.didFinish = true
+        // 流到达终态即从“进行中”集合移除：`isStreaming(sessionId:)`/`draft`
+        // 立刻反映“已结束”，UI 收尾不再与 consume() 的清理时序竞争（consume
+        // 要等执行任务完全返回才移除 executions，收尾期间仍会拦截同会话重复
+        // consume）。已完成消息已由随后的 force checkpoint 落库。
+        contexts.removeValue(forKey: sessionId)
         onFinish?(sessionId, state)
         let totalDuration = context.clockStartedAt.duration(to: ContinuousClock.now)
         onCompleted?(

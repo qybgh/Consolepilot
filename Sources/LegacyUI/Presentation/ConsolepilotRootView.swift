@@ -658,8 +658,10 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
             streamCoordinator.onFinish = { [weak self] sessionId, state in
                 guard let self, sessionStore?.currentId == sessionId else { return }
                 renderer.finishStream(state: state)
-                // Action/CLI streams are not represented in requestTasks; defer
-                // the state refresh until StreamCoordinator removes its context.
+                // Action/CLI streams are not represented in requestTasks; defer one
+                // beat so onCompleted has registered the terminal status, then let
+                // updateSessionUIState apply it authoritatively (it no longer
+                // recomputes “streaming” from the coordinator cleanup timing).
                 Task { @MainActor [weak self] in
                     await Task.yield()
                     self?.updateSessionUIState()
@@ -913,6 +915,9 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
     /// session so deltas have a visible destination while the stream runs.
     private func prepareActionSession(_ id: String) {
         guard let session = sessionStore?.session(id: id) else { return }
+        // 新一轮 Action 流开始（可能复用 dedicated 会话）：作废旧终态，
+        // 与聊天 submit 的清理保持一致，避免状态栏被上一轮“回复完成”短路。
+        completionStatuses.removeValue(forKey: id)
         showSession(id)
         // Action shortcuts originate in another App. Do not activate or make
         // Consolepilot key here: the source App must remain frontmost and the
@@ -1191,6 +1196,15 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
 
     private func updateSessionUIState() {
         guard let currentId = sessionStore?.currentId else {
+            inputView.isEditable = true
+            updateReadyStatus()
+            return
+        }
+        // 最近一次流已进入终态（onCompleted 已登记文案）：直接展示终态并恢复
+        // 输入。终态登记在流开始时即被清除，因此这里不会把进行中的生成误判为
+        // 已结束；同时也不再依赖 coordinator 上下文的清理时序（旧实现会在
+        // consume() 收尾前把“回复完成”重新覆盖回“正在生成”）。
+        if completionStatuses[currentId] != nil {
             inputView.isEditable = true
             updateReadyStatus()
             return

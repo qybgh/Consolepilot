@@ -225,6 +225,35 @@ final class TransportTests: XCTestCase {
     }
 
     @MainActor
+    func testStreamIsNotStreamingOnceTerminalBeforeConsumeReturns() async throws {
+        let path = FileManager.default.temporaryDirectory.appendingPathComponent(
+            "ConsolepilotTerminalStreaming-\(UUID().uuidString).sqlite"
+        ).path
+        let database = try AppDatabase(path: path)
+        let sessions = try SessionStore(database: database)
+        let session = sessions.create(
+            channel: .console, title: "Terminal",
+            meta: SessionMeta(actionId: nil, profileId: nil, provider: nil, model: nil, sourceApp: nil))
+        let coordinator = StreamCoordinator(sessionStore: sessions, usageStore: UsageStore(database: database))
+        // onCompleted 在 consume() 完全返回前同步触发；此刻该会话必须已不再被判定为
+        // “流式中”。否则 UI 收尾会撞上清理时序竞态：consume 尚未移除上下文时重算
+        // 状态，把刚登记的“回复完成”覆盖回“正在生成”，且再无后续刷新纠正。
+        var stillStreamingAtCompletion = true
+        coordinator.onCompleted = { sessionId, _, _, _, _, _ in
+            stillStreamingAtCompletion = coordinator.isStreaming(sessionId: sessionId)
+        }
+        let events = AsyncThrowingStream<StreamEvent, Error> { continuation in
+            continuation.yield(.started(model: "test"))
+            continuation.yield(.delta("done"))
+            continuation.yield(.finished)
+            continuation.finish()
+        }
+        await coordinator.consume(events, into: session.id)
+        XCTAssertFalse(stillStreamingAtCompletion)
+        XCTAssertFalse(coordinator.isStreaming(sessionId: session.id))
+    }
+
+    @MainActor
     func testStreamCoordinatorCoalescesThousandDeltas() async throws {
         let path = FileManager.default.temporaryDirectory.appendingPathComponent(
             "ConsolepilotCoalescing-\(UUID().uuidString).sqlite"
