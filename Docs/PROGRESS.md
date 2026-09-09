@@ -293,3 +293,17 @@
 - Periphery 结论（工具链限制，非代码残留）：Periphery 3.8.0 在本工程（Xcode 16.4/Swift 6.1.2，`-package-name Consolepilot` 多 framework）漏报大量真实使用——例如同模块内 `RuntimeBindings` 对 `HotkeyRegistry` 的 `replaceAll/removeAll` 成员调用、LegacyUI 对 `MockAIProvider`/`LocalServer` 的实例化均被报 unused；清空 DerivedData 后重扫结论不变。以其报告驱动删除会破坏可用代码，故 P1-F 死代码判定以「全仓库 grep 确定性核实 + `xcodebuild analyze` + warnings-as-errors」为准；`make lint` 保留 periphery 为报告性（`|| true`），并已在 Makefile 注释与本文档说明原因。LegacyUI/Rendering 报告项随 P2 整层删除自然消失。
 - 门禁：**108 项全绿**；`make lint` 全绿（含新增残留扫描）；`make build` Debug/Release 通过；`make release VERSION=0.2.0-p1` 产物见 dist/。
 - **P1 DoD 判定**：PLAN §4 P1 完成条件逐条满足（8-target 依赖方向零违规、领域纯净、Repository/流/Provider/Action 契约全绿、删除项零残留、配置语义按 D6/D7）。按计划暂停，待你在 macOS 14 执行实机验收（清单见 `Docs/ACCEPTANCE-P1-MACOS14.md`，产物见 dist/）；真实 Provider 动网子集待你提供低权限测试凭据后补跑。
+
+### P1 追加 §6.2 稳定性/性能门禁（2026-09-09）
+
+- 提交：`06ff894 test: add P1 stability/perf gates and surface silent store failures (P1 acceptance)`。
+- 新增 `Tests/StabilityTests.swift` 4 项（`@MainActor Harness`，每轮独立临时目录与 SQLite）：
+  - 100 串行 Action：每轮结束后请求注册表为空、无残留任务；固定复用 1 个 dedicated 会话，落库 200 行（100 user + 100 assistant），usage `requestCount=100` 不重不漏。
+  - 10 并发 Action：各归独立会话互不串线，全部可取消且终态后注册表清空。
+  - 10,000 个 SSE delta 单流：合帧完整、末行/内存状态正确，无丢失、无重复。
+  - 配置加载（解析+校验）基准：P95 < 100ms 回归护栏。
+- 顺带修掉两处静默失败（`try?` → do/catch + `Log.error`）：`ConfigStore` 文件监听重绑失败、`SessionStore` 删除后分页 fetch 失败——此前失败被静默吞掉，现均显式记录。
+- 门禁：**112 项全绿**（108 + 4）；`make lint` 全绿（drift/swift-format/SwiftLint/analyze/密钥/import 方向/残留扫描零违规）。
+- 交付产物重建：源变更后 `make release VERSION=0.2.0-p1` 重新打包；消费者侧校验通过（unzip → `shasum -a 256 -c SHA256SUMS.txt` OK → `codesign --verify --deep --strict` OK，adhoc universal）；最终产物 SHA `dd9dfec2…`（随源码变更重建）。`dist/` 为 gitignore 本地产物，不入库。
+- 跟进修复（`a16449c fix: log session touch persist failures instead of silent try?`）：§6.1 深度审查补查发现 `SessionStore.touchSession` 的 updatedAt 落库仍为静默 `try?`（每次 checkpoint 触发，失败会使重启后会话排序回退且无日志），改为显式 do/catch + `Log.error`；修复后全量 **112 项仍全绿**、`make lint` 全绿。
+- 至此 PLAN §6.2 自动化门禁全部落地。剩余人工验收仅两项：macOS 14 实机（清单见 `Docs/ACCEPTANCE-P1-MACOS14.md`）与真实 Provider 动网子集（待你提供低权限测试凭据）。
