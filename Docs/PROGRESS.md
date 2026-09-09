@@ -242,3 +242,13 @@
 - `UsageAggregator` 抽为 Stores 与 Repository 共用，消除汇总规则重复。
 - 门禁：新增 `Tests/SQLiteRepositoryTests.swift` 7 项（temp-file SQLite 每次隔离=内存库语义、WAL journal 断言、分页边界、重开持久化 checkpoint、用量周期聚合、审计仅元数据、配置 last-good）；**90 项全绿**。
 - 依赖门禁加强：`Scripts/check-imports.py` 现同时禁止 Domain/Application import GRDB/AppKit/SwiftUI/Security/Network/Carbon/TOMLDecoder/Observation/CoreText/Combine（纯净层约束），当前 0 违规。
+
+### P1-C 验收记录（流与并发重建，2026-09-09）
+
+- 提交：`e15e12d refactor: wire RequestExecution registry and unified stream cancellation (P1-C)`。
+- 新增 `Sources/Infrastructure/StreamExecution.swift`：`package actor RequestExecution`，状态机 `queued → connecting → streaming → completed/failed/cancelled`（终态不可逆、终态后写入被忽略、`cancel` 幂等、先取消后启动不执行任务体）；持有会话消费任务。
+- `StreamCoordinator` 成为取消注册表：每个进行中会话注册一个 `RequestExecution`，消费任务由 execution 持有；新增统一 `cancel(sessionId:) async` = 同步 flush+checkpoint（不丢已收前缀）+ 取消执行任务；`drive` 逐事件驱动状态机并登记终态。
+- LegacyUI 停止路径统一：`/stop` 与 ⌃C 收敛到 `stopGeneration(sessionId:)`（owned cancel task → `coordinator.cancel`），不再散落 interrupt+任务句柄取消。
+- 门禁：新增 `Tests/StreamExecutionTests.swift` 7 项（actor 生命周期、先取消后启动、取消幂等、终态不可变、coordinator 取消后不再收增量且已收前缀以 interrupted 落库、空闲会话取消 no-op、usage 恰好一次）；**97 项全绿**；`make lint` 全绿（drift/swift-format/SwiftLint/analyze/密钥扫描/import 方向零违规；periphery 报告仅 `|| true` 记录，P1-F 清零）。
+- 既有 TransportTests 语义全迁移通过（并行流隔离、1000 delta 合帧、SQLite trace 无活跃写、中断前缀、checkpoint、usage 恰好一次）。
+- 遗留（明确归属后续阶段）：取消协议的其余入口（会话删除/配置热重载/Action 取消）由 P1-E 的 ActionExecutionUseCase 接线；`RequestExecution` 时间/错误/usage 记账字段在 P1-E 落地；`consume` 调用方仍以 Coordinator API 为主，UseCase 直连 execution 留 P1-E。
