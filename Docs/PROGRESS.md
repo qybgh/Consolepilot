@@ -206,3 +206,11 @@
 - 每个里程碑只有 DoD 与 G1–G3 全部满足后才标记“完成”。
 - 人工验收失败记录具体步骤、截图/日志与修复版本，不用口头“看起来通过”代替证据。
 - 真实 API 调用、系统权限授予、断网/拔屏、干净账户和 Instruments 等必须由用户实机配合的项目，集中成批请求，不零散打断开发。
+
+### P1-A S1 记录（ConsolepilotDomain 提取，2026-09-09）
+
+- 提交：`68588a8`（实体/记录分离前置）、`64e0c30`（记录）、`b803d05 refactor: extract ConsolepilotDomain module with pure config/models and migrated AppError/Log/HotkeySpec/TemplateEngine`。
+- ConsolepilotDomain target（静态 framework）建立：Sources/Domain/{Models,Repositories,UseCases,Config} + TemplateEngine/AppError/Log/HotkeySpec；Domain 纯值类型/协议/错误全部 public 化（跨模块访问所需；P1-E 清理废弃字段后按需回收可见性）。
+- 纯化：FrontmostInfo/UsageSummary 移入 Domain；UsageStore 不再定义 UsagePeriod/UsageSummary；GRDB record（*Record.swift）留在 Infrastructure 并与实体分离。
+- 门禁：`make test` 83 项全绿；swift-format strict / SwiftLint strict / xcodebuild analyze / 密钥扫描全过；xcodegen 漂移幂等。
+- 遗留（后续 slice）：Domain 目录下 ActionRunner/StreamCoordinator/Stores 因依赖 AppKit/GRDB 暂编入实现层，P1-C/E 重写时归位。
