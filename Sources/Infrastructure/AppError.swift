@@ -6,7 +6,9 @@ enum AppError: Error, Equatable, Sendable {
     case transport(TransportError)
     case storage(StorageError)
     case server(ServerError)
+    case notImplemented(String)
 
+    /// 面向用户的直接可读文案（中文）。
     var userMessage: String {
         switch self {
         case .config(let error): error.userMessage
@@ -14,6 +16,77 @@ enum AppError: Error, Equatable, Sendable {
         case .transport(let error): error.userMessage
         case .storage(let error): error.userMessage
         case .server(let error): error.userMessage
+        case .notImplemented(let feature): "该功能尚未实现：\(feature)"
+        }
+    }
+
+    /// 稳定错误码：不随文案变化，供测试与日志断言。
+    var code: String {
+        switch self {
+        case .config: "config.invalid"
+        case .capture(let error):
+            switch error {
+            case .noPermission: "capture.noPermission"
+            case .allStrategiesFailed: "capture.allStrategiesFailed"
+            case .emptySelection: "capture.emptySelection"
+            case .excludedApp: "capture.excludedApp"
+            case .secureInputActive: "capture.secureInputActive"
+            }
+        case .transport(let error):
+            switch error {
+            case .unauthorized: "transport.unauthorized"
+            case .rateLimited: "transport.rateLimited"
+            case .serverError: "transport.serverError"
+            case .network: "transport.network"
+            case .decoding: "transport.decoding"
+            case .cancelled: "transport.cancelled"
+            case .interrupted: "transport.interrupted"
+            case .connectionLost: "transport.connectionLost"
+            case .configInvalid: "transport.configInvalid"
+            }
+        case .storage: "storage.unavailable"
+        case .server(let error):
+            switch error {
+            case .portUnavailable: "server.portUnavailable"
+            case .nonLoopbackRejected: "server.nonLoopbackRejected"
+            case .payloadTooLarge: "server.payloadTooLarge"
+            case .tooManyConnections: "server.tooManyConnections"
+            case .unauthorized: "server.unauthorized"
+            }
+        case .notImplemented: "notImplemented"
+        }
+    }
+
+    /// 下一步可执行建议；无恢复动作的错误返回空串。
+    var recoverySuggestion: String {
+        switch self {
+        case .config: "请检查配置文件语法与字段取值后重试。"
+        case .capture: "请确认已授予辅助功能权限，或改用复制文本后触发。"
+        case .transport(let error):
+            switch error {
+            case .unauthorized: "请检查 API Key 配置与访问权限。"
+            case .rateLimited: "请稍后重试。"
+            case .serverError: "请稍后重试，或检查服务端状态。"
+            case .network: "请检查网络连接后重试。"
+            case .decoding: "请更新应用后重试，或联系支持。"
+            case .configInvalid: "请检查配置中的模型与接口设置。"
+            case .cancelled, .interrupted, .connectionLost: ""
+            }
+        case .storage: "请确认应用数据目录可写后重试。"
+        case .server: "请检查本地服务端口占用与访问来源。"
+        case .notImplemented: ""
+        }
+    }
+
+    /// 脱敏诊断信息：仅含类型/状态等安全上下文，绝不包含密钥或捕获正文。
+    var diagnostic: String {
+        switch self {
+        case .config: "配置错误"
+        case .capture: "文本捕获失败"
+        case .transport: "网络或传输层错误"
+        case .storage: "存储错误"
+        case .server: "本地服务错误"
+        case .notImplemented(let feature): "功能未实现：\(feature)"
         }
     }
 

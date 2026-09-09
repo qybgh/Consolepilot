@@ -31,6 +31,7 @@ targets:
     deploymentTarget: "14.0"
     sources:
       - path: Sources/Domain
+      - path: Sources/Application
       - path: Sources/Infrastructure
       - path: Sources/Rendering
       - path: Sources/Transport
