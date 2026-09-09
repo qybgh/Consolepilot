@@ -304,7 +304,11 @@
   - 配置加载（解析+校验）基准：P95 < 100ms 回归护栏。
 - 顺带修掉两处静默失败（`try?` → do/catch + `Log.error`）：`ConfigStore` 文件监听重绑失败、`SessionStore` 删除后分页 fetch 失败——此前失败被静默吞掉，现均显式记录。
 - 门禁：**112 项全绿**（108 + 4）；`make lint` 全绿（drift/swift-format/SwiftLint/analyze/密钥/import 方向/残留扫描零违规）。
-- 交付产物重建：源变更后 `make release VERSION=0.2.0-p1` 重新打包；消费者侧校验通过（unzip → `shasum -a 256 -c SHA256SUMS.txt` OK → `codesign --verify --deep --strict` OK，adhoc universal）；最终产物 SHA `5db819e2…`（随源码变更重建）。`dist/` 为 gitignore 本地产物，不入库。
+- 交付产物重建：源变更后 `make release VERSION=0.2.0-p1` 重新打包；消费者侧校验通过（unzip → `shasum -a 256 -c SHA256SUMS.txt` OK → `codesign --verify --deep --strict` OK，adhoc universal）；最终产物 SHA `6f709e27…`（随源码变更重建）。`dist/` 为 gitignore 本地产物，不入库。
 - 跟进修复（`a16449c fix: log session touch persist failures instead of silent try?`）：§6.1 深度审查补查发现 `SessionStore.touchSession` 的 updatedAt 落库仍为静默 `try?`（每次 checkpoint 触发，失败会使重启后会话排序回退且无日志），改为显式 do/catch + `Log.error`；修复后全量 **112 项仍全绿**、`make lint` 全绿。
 - 版本注入修复（`eaf751b fix: stamp app bundle version from build settings so release VERSION applies`）：交付预检发现 app 内 `CFBundleShortVersionString` 恒为 XcodeGen 默认 `1.0`（`Resources/Info.plist` 是 `info.properties` 生成产物，直接改文件会被 xcodegen 覆盖；且硬编码未引用 `$(MARKETING_VERSION)`），导致 `make release VERSION=0.2.0-p1` 产物名/CLI 与 App 内版本不一致。现 `info.properties` 引用 `$(MARKETING_VERSION)`/`$(CURRENT_PROJECT_VERSION)`：Debug/Release 默认走 xcconfig `0.2.0`，`make release VERSION=0.2.0-p1` 命令行覆盖为 `0.2.0-p1`（已用 plutil 验证 Debug=0.2.0、dist=0.2.0-p1）；修复后 112 项全绿、lint 全绿、消费者侧校验通过。
+- 本机真实 Provider 验收反馈修复（2026-09-09，两次提交）：
+  - `45a5987 fix: surface actionable Chinese errors when profile API keys are missing`——真实 Profile 触发 Action 时若 `${keychain:账户}` 条目缺失/`${env:变量}` 未设置/`apiKey` 为空，之前只显示裸 `SecretResolverError error 1`；现经 `SecretResolver.resolvedProfileKey(profileId:reference:)` 映射为带原因与解决步骤的中文 `ConfigError`（ActionRunner 与聊天提交路径同用），UI/CLI 直接展示。新增 `Tests/SecretResolverTests.swift` 3 项。
+  - `a2e7f4b chore: ship clean default config and stop settings editor example appending`——出厂 `DefaultConfig.toml` 移除 Profile/Action 示例块（每项至多一行注释、无残留字段）；Settings 编辑器不再自动拼接“高级配置参考”示例段（所见即磁盘文件，避免重复示例与注释落盘）；CONFIG.md 措辞与实际语义对齐（仅 `attachTo` 报错；`launchAtLogin`/`toggleHotkey`/`tails` 残留被忽略并建议手动删除）。新增出厂模板洁净度测试 1 项。
+  - 门禁：**116 项全绿**（112 + 4）；`make lint` 全绿；`make release VERSION=0.2.0-p1` 产物 SHA `6f709e27…`，消费者侧校验通过（unzip/shasum/codesign OK），包内 DefaultConfig 已为精简版。
 - 至此 PLAN §6.2 自动化门禁全部落地。剩余人工验收仅两项：macOS 14 实机（清单见 `Docs/ACCEPTANCE-P1-MACOS14.md`）与真实 Provider 动网子集（待你提供低权限测试凭据）。
