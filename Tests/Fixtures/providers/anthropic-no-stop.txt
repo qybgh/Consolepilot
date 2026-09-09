@@ -1,0 +1,6 @@
+event: message_start
+data: {"type":"message_start","message":{"usage":{"input_tokens":4,"output_tokens":1}}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","delta":{"text":"hi"}}
+

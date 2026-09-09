@@ -460,21 +460,6 @@ final class TransportTests: XCTestCase {
     }
 }
 
-private final class URLProtocolStub: URLProtocol {
-    nonisolated(unsafe) static var handler: ((URLRequest) -> (HTTPURLResponse, Data))?
-
-    override class func canInit(with request: URLRequest) -> Bool { true }
-    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
-    override func startLoading() {
-        guard let handler = Self.handler, let client else { return }
-        let (response, data) = handler(request)
-        client.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-        client.urlProtocol(self, didLoad: data)
-        client.urlProtocolDidFinishLoading(self)
-    }
-    override func stopLoading() {}
-}
-
 private final class SQLTraceBox: @unchecked Sendable {
     private let lock = NSLock()
     private(set) var values: [String] = []

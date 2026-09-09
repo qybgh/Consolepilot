@@ -1,0 +1,3 @@
+event: content_block_delta
+data: {not-json}
+

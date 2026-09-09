@@ -1,0 +1,15 @@
+event: message_start
+data: {"type":"message_start","message":{"usage":{"input_tokens":10,"output_tokens":1}}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","delta":{"text":"你好"}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","delta":{"text":"世界"}}
+
+event: message_delta
+data: {"type":"message_delta","usage":{"output_tokens":8}}
+
+event: message_stop
+data: {"type":"message_stop"}
+

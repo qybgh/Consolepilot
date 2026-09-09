@@ -159,6 +159,8 @@ targets:
     deploymentTarget: "14.0"
     sources:
       - path: Tests
+      - path: Tests/Fixtures/providers
+        buildPhase: resources
       - path: Sources/Infrastructure/Config/DefaultConfig.toml
         buildPhase: resources
     dependencies:

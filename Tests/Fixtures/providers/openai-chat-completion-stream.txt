@@ -1,0 +1,10 @@
+data: {"choices":[{"delta":{"content":"你好"},"index":0}]}
+
+data: {"choices":[{"delta":{"content":"世界"},"index":0}]}
+
+data: {"choices":[{"delta":{},"finish_reason":"stop","index":0}]}
+
+data: {"usage":{"prompt_tokens":9,"completion_tokens":6}}
+
+data: [DONE]
+
