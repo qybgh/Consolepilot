@@ -7,18 +7,16 @@ public struct AppConfig: Sendable, Equatable {
     public let capture: CaptureConfig
     public let profiles: [Profile]
     public let actions: [Action]
-    public let tails: [TailConfig]
 
     public init(
         general: GeneralConfig, server: ServerConfig, capture: CaptureConfig, profiles: [Profile],
-        actions: [Action], tails: [TailConfig]
+        actions: [Action]
     ) {
         self.general = general
         self.server = server
         self.capture = capture
         self.profiles = profiles
         self.actions = actions
-        self.tails = tails
     }
 
     public func profile(id: String) -> Profile? { profiles.first { $0.id == id } }
@@ -27,6 +25,7 @@ public struct AppConfig: Sendable, Equatable {
 
 public struct GeneralConfig: Sendable, Equatable {
     public let port: UInt16
+    /// UI 外观字段（theme/opacity/alwaysOnTop/fontName/fontSize/compactFontSize）本轮仅解析与校验，接线随 P2 SwiftUI 迁移。
     public let theme: String
     public let opacity: Double
     public let alwaysOnTop: Bool
@@ -34,14 +33,11 @@ public struct GeneralConfig: Sendable, Equatable {
     public let fontSize: Double
     public let compactFontSize: Double
     public let scrollbackLines: Int
-    public let launchAtLogin: Bool
-    public let toggleHotkey: String
     public let allowRealProvider: Bool
 
     public init(
         port: UInt16, theme: String, opacity: Double, alwaysOnTop: Bool, fontName: String,
-        fontSize: Double, compactFontSize: Double, scrollbackLines: Int, launchAtLogin: Bool,
-        toggleHotkey: String, allowRealProvider: Bool = false
+        fontSize: Double, compactFontSize: Double, scrollbackLines: Int, allowRealProvider: Bool = false
     ) {
         self.port = port
         self.theme = theme
@@ -51,8 +47,6 @@ public struct GeneralConfig: Sendable, Equatable {
         self.fontSize = fontSize
         self.compactFontSize = compactFontSize
         self.scrollbackLines = scrollbackLines
-        self.launchAtLogin = launchAtLogin
-        self.toggleHotkey = toggleHotkey
         self.allowRealProvider = allowRealProvider
     }
 }
@@ -123,15 +117,18 @@ public struct Action: Sendable, Equatable, Identifiable {
     public let systemPrompt: String?
     public let userPrompt: String
     public let input: InputSource
-    public let attachTo: AttachMode
+    /// Action 会话模式：本轮仅支持 `.dedicated`（独立后台会话，按 actionId+sourceApp 复用）。
+    public let sessionMode: SessionMode
+    /// Action 级请求超时（秒）；显式设置时覆盖 profile.timeoutSec，未设置回退 profile。
+    public let timeoutSec: Int?
     public let autoShow: Bool
     public let notifyOnDone: Bool
     public let overrides: ParamOverrides?
 
     public init(
         id: String, name: String, hotkey: String?, profileId: String, systemPrompt: String?,
-        userPrompt: String, input: InputSource, attachTo: AttachMode, autoShow: Bool,
-        notifyOnDone: Bool, overrides: ParamOverrides?
+        userPrompt: String, input: InputSource, sessionMode: SessionMode, timeoutSec: Int?,
+        autoShow: Bool, notifyOnDone: Bool, overrides: ParamOverrides?
     ) {
         self.id = id
         self.name = name
@@ -140,7 +137,8 @@ public struct Action: Sendable, Equatable, Identifiable {
         self.systemPrompt = systemPrompt
         self.userPrompt = userPrompt
         self.input = input
-        self.attachTo = attachTo
+        self.sessionMode = sessionMode
+        self.timeoutSec = timeoutSec
         self.autoShow = autoShow
         self.notifyOnDone = notifyOnDone
         self.overrides = overrides
@@ -148,32 +146,21 @@ public struct Action: Sendable, Equatable, Identifiable {
 }
 
 public enum InputSource: String, Sendable, CaseIterable { case selection, clipboard, prompt, none }
-public enum AttachMode: String, Sendable, CaseIterable { case newSession, currentSession }
+
+/// Action 会话模式。本轮仅 `.dedicated`：每次执行固定落在该 Action 的独立后台会话。
+public enum SessionMode: String, Sendable, CaseIterable { case dedicated }
 
 public struct ParamOverrides: Sendable, Equatable {
     public let temperature: Double?
     public let maxTokens: Int?
     public let model: String?
+    /// 请求级超时（秒）；由 Action.timeoutSec 注入，优先于 profile.timeoutSec。
+    public let timeoutSec: Int?
 
-    public init(temperature: Double?, maxTokens: Int?, model: String?) {
+    public init(temperature: Double?, maxTokens: Int?, model: String?, timeoutSec: Int? = nil) {
         self.temperature = temperature
         self.maxTokens = maxTokens
         self.model = model
+        self.timeoutSec = timeoutSec
     }
 }
-
-public struct TailConfig: Sendable, Equatable {
-    public let path: String
-    public let enabled: Bool
-    public let format: TailFormat
-    public let fromEnd: Bool
-
-    public init(path: String, enabled: Bool, format: TailFormat, fromEnd: Bool) {
-        self.path = path
-        self.enabled = enabled
-        self.format = format
-        self.fromEnd = fromEnd
-    }
-}
-
-public enum TailFormat: String, Sendable, CaseIterable { case text, jsonl }

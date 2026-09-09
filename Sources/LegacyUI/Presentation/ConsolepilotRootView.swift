@@ -42,8 +42,7 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
     private var runtimeBindings: RuntimeBindings?
     private var localServer: LocalServer?
     private var actionRunner: ActionRunner?
-    private var tailWatchers: [String: FileTailWatcher] = [:]
-    private var tailSessions: [String: String] = [:]
+
     private let mockProvider = MockAIProvider()
     private var requestTasks: [String: Task<Void, Never>] = [:]
     private var actionTasks: [String: Task<Void, Never>] = [:]
@@ -157,7 +156,6 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
     public func persistActiveStreams() {
         coordinator?.persistActiveDrafts()
         runtimeBindings?.shutdown()
-        for watcher in tailWatchers.values { Task { await watcher.stop() } }
         if let localServer { Task { await localServer.stop() } }
     }
 
@@ -790,15 +788,6 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
                 let message = (error as? ConfigError)?.userMessage ?? "请求执行失败"
                 return (422, Data(message.utf8))
             }
-        case "/tail":
-            guard let payload = try? JSONDecoder().decode(LocalTail.self, from: body), !payload.path.isEmpty
-            else { return (400, Data("需要 path".utf8)) }
-            do {
-                try startTail(path: payload.path)
-            } catch {
-                return (422, Data("无法尾随文件：\(error.localizedDescription)".utf8))
-            }
-            return (202, Data("accepted".utf8))
         default:
             return (404, Data("Not Found".utf8))
         }
@@ -826,41 +815,6 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
         let actionId: String
         let input: String?
     }
-    private struct LocalTail: Codable, Sendable { let path: String }
-
-    private func startTail(path: String) throws {
-        guard tailWatchers[path] == nil else { return }
-        let expandedPath = (path as NSString).expandingTildeInPath
-        guard FileManager.default.fileExists(atPath: expandedPath) else {
-            throw CocoaError(.fileNoSuchFile, userInfo: [NSFilePathErrorKey: expandedPath])
-        }
-        let watcher = FileTailWatcher(
-            config: TailConfig(path: expandedPath, enabled: true, format: .text, fromEnd: true),
-            onLine: { [weak self] line in
-                Task { @MainActor [weak self] in self?.ingestTailLine(line, path: path) }
-            })
-        tailWatchers[path] = watcher
-        Task { try? await watcher.start() }
-    }
-
-    private func ingestTailLine(_ line: String, path: String) {
-        guard let sessionStore else { return }
-        let session: Session
-        if let id = tailSessions[path], let existing = sessionStore.session(id: id) {
-            session = existing
-        } else {
-            session = sessionStore.create(
-                channel: .tail, title: "日志尾随",
-                meta: SessionMeta(actionId: nil, profileId: nil, provider: nil, model: nil, sourceApp: nil))
-            tailSessions[path] = session.id
-        }
-        sessionStore.appendMessage(Message(sessionId: session.id, role: .tool, content: line))
-        reloadSessionButtons()
-        // Re-render the active tail session so each newly completed line is
-        // visible immediately; the session itself is reused per file path.
-        showSession(session.id)
-    }
-
     private func performExternalAsk(_ prompt: String) async -> String {
         guard let sessionStore, let coordinator else { return "Consolepilot 尚未就绪" }
         let session = sessionStore.create(

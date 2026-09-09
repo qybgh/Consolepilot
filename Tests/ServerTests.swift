@@ -1,4 +1,3 @@
-import ConsolepilotDomain
 import Foundation
 import XCTest
 
@@ -48,45 +47,4 @@ final class ServerTests: XCTestCase {
         XCTAssertEqual(request.body, bytes)
         XCTAssertNil(LocalServer.parseRequest(header + bytes.prefix(3)))
     }
-
-    func testTailWatcherReadsCompleteLinesAndHandlesRotation() async throws {
-        let directory = FileManager.default.temporaryDirectory
-        let path = directory.appendingPathComponent("consolepilot-tail-\(UUID().uuidString).log")
-        FileManager.default.createFile(atPath: path.path, contents: Data("one\n".utf8))
-        let lines = LineCollector()
-        let watcher = FileTailWatcher(
-            config: TailConfig(path: path.path, enabled: true, format: .text, fromEnd: false)
-        ) { line in
-            Task { await lines.append(line) }
-        }
-        try await watcher.start()
-        try await Task.sleep(for: .milliseconds(400))
-        try Data("two\npartial".utf8).write(to: path, options: .atomic)
-        try await Task.sleep(for: .milliseconds(500))
-        try Data("three\n".utf8).write(to: path, options: .atomic)
-        try await Task.sleep(for: .milliseconds(500))
-        await watcher.stop()
-        let captured = await lines.values
-        XCTAssertTrue(captured.contains("one"))
-        XCTAssertTrue(captured.contains("three"))
-    }
-
-    func testTailWatcherRejectsMissingFileBeforeStarting() async {
-        let missing = FileManager.default.temporaryDirectory
-            .appendingPathComponent("consolepilot-missing-\(UUID().uuidString).log")
-        let watcher = FileTailWatcher(
-            config: TailConfig(path: missing.path, enabled: true, format: .text, fromEnd: true)
-        ) { _ in }
-        do {
-            try await watcher.start()
-            XCTFail("expected missing file error")
-        } catch {
-            XCTAssertTrue(error is CocoaError)
-        }
-    }
-}
-
-private actor LineCollector {
-    private(set) var values: [String] = []
-    func append(_ value: String) { values.append(value) }
 }

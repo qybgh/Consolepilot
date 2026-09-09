@@ -28,12 +28,6 @@ struct ConsolepilotCLI {
             let input = arguments.dropFirst(2).joined(separator: " ")
             let inputField = input.isEmpty ? "" : ",\"input\":\(json(input))"
             send(path: "/run", body: Data("{\"actionId\":\(json(action))\(inputField)}".utf8))
-        case "tail":
-            guard let path = arguments.dropFirst().first, !path.isEmpty else {
-                output("用法：consolepilot tail <file>")
-                return
-            }
-            send(path: "/tail", body: Data("{\"path\":\(json(path))}".utf8))
         default:
             output("未知命令：\(command)")
             printUsage()
@@ -41,11 +35,10 @@ struct ConsolepilotCLI {
     }
 
     private static func printUsage() {
-        output("用法：consolepilot <ask|open|run|tail> [options]")
+        output("用法：consolepilot <ask|open|run> [options]")
         output("  ask <prompt>       发送一次提问")
         output("  open               唤回 Consolepilot 窗口")
         output("  run <actionId>     执行配置中的 action")
-        output("  tail <file>        尾随文件并推送到控制台")
     }
 
     private static func openApplication() {

@@ -36,7 +36,7 @@ struct Theme: Sendable, Equatable {
             roleColors: [.user: NSColor.systemCyan, .assistant: NSColor.systemGreen, .system: NSColor.systemYellow],
             channelColors: [
                 .action: NSColor.systemPurple, .console: NSColor.systemBlue, .cli: NSColor.systemOrange,
-                .push: NSColor.systemPink, .tail: NSColor.systemGray,
+                .push: NSColor.systemPink,
             ],
             codeBackground: NSColor(calibratedWhite: 0.12, alpha: 1),
             syntax: SyntaxPalette(
@@ -46,7 +46,7 @@ struct Theme: Sendable, Equatable {
         "mono": Theme(
             name: "mono", background: .black, foreground: .white, cursor: .white, ansi: Self.standardANSI,
             roleColors: [.user: .white, .assistant: .white, .system: .white],
-            channelColors: [.action: .white, .console: .white, .cli: .white, .push: .white, .tail: .white],
+            channelColors: [.action: .white, .console: .white, .cli: .white, .push: .white],
             codeBackground: NSColor(calibratedWhite: 0.12, alpha: 1),
             syntax: SyntaxPalette(
                 keyword: .white, string: .white, number: .white, comment: .white,

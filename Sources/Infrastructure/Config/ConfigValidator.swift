@@ -32,14 +32,6 @@ package struct ConfigValidator: Sendable {
                 ConfigIssue(code: .duplicateActionId, line: line("id = \"\(id)\""), message: "重复的 action.id：\(id)"))
         }
 
-        let toggle = config.general.toggleHotkey
-        if !toggle.isEmpty, !Self.isValidHotkey(toggle) {
-            errors.append(
-                ConfigIssue(
-                    code: .invalidHotkeySyntax,
-                    line: line("toggleHotkey = \"\(toggle)\""),
-                    message: "toggleHotkey 语法无效：\(toggle)"))
-        }
         var hotkeys: [String: String] = [:]
         for action in config.actions {
             if !profileIDs.contains(action.profileId) {
@@ -63,12 +55,6 @@ package struct ConfigValidator: Sendable {
                             message: "快捷键与 action \(previous) 重复"))
                 } else {
                     hotkeys[hotkey] = action.id
-                }
-                if !toggle.isEmpty, toggle == hotkey {
-                    errors.append(
-                        ConfigIssue(
-                            code: .hotkeyConflictWithToggle, line: line("hotkey = \"\(hotkey)\""),
-                            message: "快捷键与 toggleHotkey 冲突"))
                 }
             }
             let templates = [action.userPrompt, action.systemPrompt ?? ""]
@@ -96,8 +82,9 @@ package struct ConfigValidator: Sendable {
                         code: .warnNoAXPermission, line: line("input = \"selection\""), message: "未授予辅助功能权限，将按降级链路捕获"))
             }
             if let overrides = action.overrides,
-                (overrides.temperature.map { $0 < 0 || $0 > 2 } ?? false)
+                (overrides.temperature.map { !$0.isFinite || $0 < 0 || $0 > 2 } ?? false)
                     || (overrides.maxTokens.map { $0 <= 0 } ?? false)
+                    || (overrides.timeoutSec.map { $0 <= 0 } ?? false)
                     || (overrides.model != nil
                         && overrides.model?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == true)
             {
@@ -111,10 +98,17 @@ package struct ConfigValidator: Sendable {
                     ConfigIssue(
                         code: .invalidInputSource, line: nil, message: "action.input 无效：\(action.input.rawValue)"))
             }
-            if !AttachMode.allCases.contains(action.attachTo) {
+            if !SessionMode.allCases.contains(action.sessionMode) {
                 errors.append(
                     ConfigIssue(
-                        code: .invalidAttachMode, line: nil, message: "action.attachTo 无效：\(action.attachTo.rawValue)"))
+                        code: .invalidSessionMode, line: nil,
+                        message: "action.sessionMode 无效：\(action.sessionMode.rawValue)"))
+            }
+            if let timeoutSec = action.timeoutSec, timeoutSec <= 0 {
+                errors.append(
+                    ConfigIssue(
+                        code: .valueOutOfRange, line: nil,
+                        message: "Action \(action.id) 的 timeoutSec 必须是正整数"))
             }
         }
 
@@ -130,7 +124,9 @@ package struct ConfigValidator: Sendable {
                 errors.append(
                     ConfigIssue(code: .unknownProvider, line: nil, message: "未知 provider：\(profile.provider.rawValue)"))
             }
-            if profile.temperature < 0 || profile.temperature > 2 || profile.maxTokens <= 0 || profile.timeoutSec <= 0 {
+            if !profile.temperature.isFinite || profile.temperature < 0 || profile.temperature > 2
+                || profile.maxTokens <= 0 || profile.timeoutSec <= 0
+            {
                 errors.append(ConfigIssue(code: .valueOutOfRange, line: nil, message: "Profile \(profile.id) 的参数超出范围"))
             }
             let isLoopback =
@@ -143,8 +139,14 @@ package struct ConfigValidator: Sendable {
             }
         }
 
-        if config.general.opacity < 0.75 || config.general.opacity > 1 {
+        if !config.general.opacity.isFinite || config.general.opacity < 0.75 || config.general.opacity > 1 {
             errors.append(ConfigIssue(code: .valueOutOfRange, line: nil, message: "opacity 必须在 0.75 到 1.0 之间"))
+        }
+        // UI 外观字体字段仅做有限数/正数校验，随 P2 SwiftUI 迁移接线。
+        if !config.general.fontSize.isFinite || config.general.fontSize <= 0
+            || !config.general.compactFontSize.isFinite || config.general.compactFontSize <= 0
+        {
+            errors.append(ConfigIssue(code: .valueOutOfRange, line: nil, message: "fontSize/compactFontSize 必须为正数"))
         }
         if config.general.port < 1024 || config.general.port > 65_535 {
             errors.append(ConfigIssue(code: .valueOutOfRange, line: nil, message: "port 必须在 1024 到 65535 之间"))
@@ -162,17 +164,6 @@ package struct ConfigValidator: Sendable {
         }
         if config.capture.maxInputChars < 100 || config.capture.maxInputChars > 1_000_000 {
             errors.append(ConfigIssue(code: .valueOutOfRange, line: nil, message: "maxInputChars 必须在 100 到 1000000 之间"))
-        }
-        for tail in config.tails {
-            guard TailFormat.allCases.contains(tail.format), !tail.path.isEmpty else {
-                errors.append(ConfigIssue(code: .invalidTailConfig, line: nil, message: "tail 配置无效"))
-                continue
-            }
-            let expanded = (tail.path as NSString).expandingTildeInPath
-            let parent = URL(fileURLWithPath: expanded).deletingLastPathComponent().path
-            if !FileManager.default.fileExists(atPath: parent) {
-                errors.append(ConfigIssue(code: .invalidTailConfig, line: nil, message: "tail 父目录不存在：\(parent)"))
-            }
         }
         if ((!config.server.authTokenRef.isEmpty && !Self.isSecretReference(config.server.authTokenRef))
             || config.server.maxBodyBytes < 1024)
@@ -221,9 +212,9 @@ struct ConfigIssue: Equatable, Sendable {
 
 enum ConfigErrorCode: String, Sendable {
     case duplicateProfileId, duplicateActionId, unknownProfileRef
-    case invalidHotkeySyntax, duplicateHotkey, hotkeyConflictWithToggle
+    case invalidHotkeySyntax, duplicateHotkey
     case unknownPlaceholder, invalidBaseURL, unresolvableSecret
     case valueOutOfRange, unknownTheme, invalidStrategy
-    case invalidInputSource, invalidAttachMode, invalidTailConfig
+    case invalidInputSource, invalidSessionMode
     case unknownProvider, invalidServerAuth, parseFailure, warnNoAXPermission
 }

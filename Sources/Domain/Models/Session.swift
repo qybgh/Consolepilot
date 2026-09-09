@@ -50,4 +50,4 @@ public struct SessionMeta: Sendable, Equatable {
     }
 }
 
-public enum SessionChannel: String, Sendable, CaseIterable { case action, console, cli, push, tail }
+public enum SessionChannel: String, Sendable, CaseIterable { case action, console, cli, push }

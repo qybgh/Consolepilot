@@ -10,8 +10,7 @@ final class InfrastructureTests: XCTestCase {
         AppConfig(
             general: GeneralConfig(
                 port: 8765, theme: "tokyo-night", opacity: 0.92, alwaysOnTop: true,
-                fontName: "SF Mono", fontSize: 13, compactFontSize: 11, scrollbackLines: 100_000,
-                launchAtLogin: false, toggleHotkey: ""),
+                fontName: "SF Mono", fontSize: 13, compactFontSize: 11, scrollbackLines: 100_000),
             server: ServerConfig(authTokenRef: "${env:CONSOLEPILOT_TEST_SECRET}", maxBodyBytes: 1_048_576),
             capture: CaptureConfig(
                 strategy: [.clipboard], simulatedCopyWait: .milliseconds(120), restoreClipboard: true,
@@ -25,10 +24,9 @@ final class InfrastructureTests: XCTestCase {
             actions: [
                 Action(
                     id: "ask", name: "Ask", hotkey: nil, profileId: "local", systemPrompt: nil,
-                    userPrompt: "{{input}}", input: .prompt, attachTo: .newSession, autoShow: true,
+                    userPrompt: "{{input}}", input: .prompt, sessionMode: .dedicated, timeoutSec: nil, autoShow: true,
                     notifyOnDone: false, overrides: nil)
-            ],
-            tails: [])
+            ])
     }
 
     private func report(for config: AppConfig) -> ValidationReport {
@@ -49,12 +47,16 @@ final class InfrastructureTests: XCTestCase {
             apiKeyRef: "plain-secret", temperature: 3, maxTokens: 0, timeoutSec: 0, priceInput: nil, priceOutput: nil)
         let general = GeneralConfig(
             port: 80, theme: "unknown", opacity: 0.5, alwaysOnTop: true, fontName: "", fontSize: 13,
-            compactFontSize: 11, scrollbackLines: 1, launchAtLogin: false, toggleHotkey: "bad")
+            compactFontSize: 11, scrollbackLines: 1)
         let capture = CaptureConfig(
             strategy: [], simulatedCopyWait: .zero, restoreClipboard: true, maxInputChars: 1, excludeBundleIds: [])
+        let badHotkeyAction = Action(
+            id: "bad-hotkey", name: "Bad", hotkey: "bad", profileId: "local", systemPrompt: nil,
+            userPrompt: "{{input}}", input: .prompt, sessionMode: .dedicated, timeoutSec: nil,
+            autoShow: true, notifyOnDone: false, overrides: nil)
         let config = AppConfig(
             general: general, server: ServerConfig(authTokenRef: "plain", maxBodyBytes: 1), capture: capture,
-            profiles: [profile], actions: base.actions, tails: [])
+            profiles: [profile], actions: base.actions + [badHotkeyAction])
         assertError(.invalidBaseURL, in: config)
         assertError(.valueOutOfRange, in: config)
         assertError(.invalidHotkeySyntax, in: config)
@@ -67,7 +69,7 @@ final class InfrastructureTests: XCTestCase {
             priceOutput: nil)
         let remoteConfig = AppConfig(
             general: validConfig().general, server: validConfig().server, capture: validConfig().capture,
-            profiles: [remote], actions: [], tails: [])
+            profiles: [remote], actions: [])
         assertError(.unresolvableSecret, in: remoteConfig)
     }
 
@@ -76,16 +78,16 @@ final class InfrastructureTests: XCTestCase {
         let actions = [
             Action(
                 id: "ask", name: "Ask", hotkey: "cmd+k", profileId: "missing", systemPrompt: "{{unknown}}",
-                userPrompt: "{{input}}", input: .prompt, attachTo: .newSession, autoShow: true,
+                userPrompt: "{{input}}", input: .prompt, sessionMode: .dedicated, timeoutSec: nil, autoShow: true,
                 notifyOnDone: false, overrides: nil),
             Action(
                 id: "ask", name: "Ask 2", hotkey: "cmd+k", profileId: "local", systemPrompt: nil,
-                userPrompt: "{{input}}", input: .prompt, attachTo: .newSession, autoShow: true,
+                userPrompt: "{{input}}", input: .prompt, sessionMode: .dedicated, timeoutSec: nil, autoShow: true,
                 notifyOnDone: false, overrides: nil),
         ]
         let config = AppConfig(
             general: base.general, server: base.server, capture: base.capture,
-            profiles: [base.profiles[0], base.profiles[0]], actions: actions, tails: [])
+            profiles: [base.profiles[0], base.profiles[0]], actions: actions)
         let codes = Set(report(for: config).errors.map(\.code))
         XCTAssertTrue(codes.contains(.duplicateProfileId))
         XCTAssertTrue(codes.contains(.duplicateActionId))
@@ -98,11 +100,11 @@ final class InfrastructureTests: XCTestCase {
         let base = validConfig()
         let action = Action(
             id: "ask", name: "Ask", hotkey: nil, profileId: "local", systemPrompt: nil,
-            userPrompt: "{{selection}}", input: .selection, attachTo: .newSession, autoShow: true,
+            userPrompt: "{{selection}}", input: .selection, sessionMode: .dedicated, timeoutSec: nil, autoShow: true,
             notifyOnDone: false, overrides: nil)
         let config = AppConfig(
             general: base.general, server: base.server, capture: base.capture, profiles: base.profiles,
-            actions: [action], tails: [])
+            actions: [action])
         let report = ConfigValidator(hasAccessibility: false).validate(config, sourceText: "")
         XCTAssertTrue(report.errors.isEmpty)
         XCTAssertTrue(report.warnings.contains { $0.code == .warnNoAXPermission })
@@ -192,10 +194,10 @@ final class InfrastructureTests: XCTestCase {
         let action = Action(
             id: "ask", name: "Ask", hotkey: nil, profileId: "local", systemPrompt: nil,
             userPrompt: "{{env:CONSOLEPILOT_MISSING_TEMPLATE_ENV}}", input: .prompt,
-            attachTo: .newSession, autoShow: true, notifyOnDone: false, overrides: nil)
+            sessionMode: .dedicated, timeoutSec: nil, autoShow: true, notifyOnDone: false, overrides: nil)
         let config = AppConfig(
             general: base.general, server: base.server, capture: base.capture,
-            profiles: base.profiles, actions: [action], tails: [])
+            profiles: base.profiles, actions: [action])
         XCTAssertTrue(report(for: config).errors.contains { $0.code == .unresolvableSecret })
     }
 
@@ -224,8 +226,6 @@ final class InfrastructureTests: XCTestCase {
             fontSize = 13
             compactFontSize = 11
             scrollbackLines = 100000
-            launchAtLogin = false
-            toggleHotkey = ""
 
             [server]
             authToken = "${env:TEST_TOKEN}"
@@ -251,14 +251,16 @@ final class InfrastructureTests: XCTestCase {
             profile = "local"
             userPrompt = "{{input}}"
             input = "prompt"
-            attachTo = "newSession"
+            sessionMode = "dedicated"
+            timeoutSec = 45
             autoShow = true
             notifyOnDone = false
             """
 
         let config = try ConfigLoader().parse(text)
         XCTAssertEqual(config.profiles.first?.id, "local")
-        XCTAssertEqual(config.actions.first?.attachTo, .newSession)
+        XCTAssertEqual(config.actions.first?.sessionMode, .dedicated)
+        XCTAssertEqual(config.actions.first?.timeoutSec, 45)
         XCTAssertEqual(config.capture.strategy, [.clipboard])
     }
 
@@ -285,8 +287,6 @@ final class InfrastructureTests: XCTestCase {
             fontSize = 13
             compactFontSize = 11
             scrollbackLines = 100000
-            launchAtLogin = false
-            toggleHotkey = ""
             [server]
             authToken = "${env:TEST_TOKEN}"
             maxBodyBytes = 1048576
@@ -366,7 +366,7 @@ final class InfrastructureTests: XCTestCase {
             userPrompt = "{{input}}"
             hotkey = "%@"
             input = "prompt"
-            attachTo = "newSession"
+            sessionMode = "dedicated"
             """
         try String(format: template, 8765, "cmd+k").write(to: url, atomically: true, encoding: .utf8)
         let store = try ConfigStore(loader: ConfigLoader(configURL: url))
@@ -451,45 +451,125 @@ final class InfrastructureTests: XCTestCase {
             resolver.canResolve("${keychain:missing-\(UUID().uuidString)}"), false)
     }
 
-    func testConfigValidatorSeparatesToggleConflictAndValidEmptyToggle() {
-        let base = validConfig()
-        let action = Action(
-            id: "ask", name: "Ask", hotkey: "cmd+k", profileId: "local", systemPrompt: nil,
-            userPrompt: "{{input}}", input: .prompt, attachTo: .newSession, autoShow: true,
-            notifyOnDone: false, overrides: nil)
-        let conflicting = AppConfig(
-            general: GeneralConfig(
-                port: base.general.port, theme: base.general.theme, opacity: base.general.opacity,
-                alwaysOnTop: base.general.alwaysOnTop, fontName: base.general.fontName,
-                fontSize: base.general.fontSize, compactFontSize: base.general.compactFontSize,
-                scrollbackLines: base.general.scrollbackLines, launchAtLogin: base.general.launchAtLogin,
-                toggleHotkey: "cmd+k"),
-            server: base.server, capture: base.capture, profiles: base.profiles,
-            actions: [action], tails: [])
-        assertError(.hotkeyConflictWithToggle, in: conflicting)
-        XCTAssertFalse(report(for: base).errors.contains { $0.code == .hotkeyConflictWithToggle })
+    func testRemovedLaunchAtLoginAndToggleHotkeyFieldsAreToleratedAsUnknownKeys() throws {
+        // launchAtLogin/toggleHotkey 已从 schema 删除：旧配置残留按键应被忽略而不报错。
+        let text = """
+            [general]
+            port = 8765
+            launchAtLogin = true
+            toggleHotkey = "cmd+shift+space"
+            theme = "tokyo-night"
+            """
+        let config = try ConfigLoader().parse(text)
+        XCTAssertEqual(config.general.port, 8765)
+        XCTAssertTrue(report(for: config).errors.isEmpty)
     }
 
-    func testConfigValidatorChecksTailFormatAndParentDirectory() {
+    func testConfigLoaderRejectsDeprecatedAttachToWithLineAndFixHint() {
+        let text = """
+            [[actions]]
+            id = "summarize"
+            name = "总结"
+            profile = "local"
+            userPrompt = "{{input}}"
+            input = "selection"
+            attachTo = "newSession"
+            """
+        XCTAssertThrowsError(try ConfigLoader().parse(text)) { error in
+            let message = (error as? ConfigError)?.userMessage ?? String(describing: error)
+            XCTAssertTrue(message.contains("第7行"), message)
+            XCTAssertTrue(message.contains("attachTo 已废弃"), message)
+            XCTAssertTrue(message.contains("sessionMode = \"dedicated\""), message)
+        }
+    }
+
+    func testConfigLoaderRejectsUnknownSessionModeValue() {
+        let text = """
+            [[actions]]
+            id = "summarize"
+            name = "总结"
+            profile = "local"
+            userPrompt = "{{input}}"
+            input = "selection"
+            sessionMode = "currentSession"
+            """
+        XCTAssertThrowsError(try ConfigLoader().parse(text)) { error in
+            let message = (error as? ConfigError)?.userMessage ?? String(describing: error)
+            XCTAssertTrue(message.contains("sessionMode 无效"), message)
+            XCTAssertTrue(message.contains("dedicated"), message)
+        }
+    }
+
+    func testConfigValidatorRejectsNonFiniteNumbers() {
         let base = validConfig()
-        let tail = TailConfig(
-            path: "/definitely/missing/consolepilot.log", enabled: true, format: .text, fromEnd: false)
+        let nanOpacity = AppConfig(
+            general: GeneralConfig(
+                port: base.general.port, theme: base.general.theme, opacity: .nan, alwaysOnTop: true,
+                fontName: "SF Mono", fontSize: 13, compactFontSize: 11,
+                scrollbackLines: base.general.scrollbackLines),
+            server: base.server, capture: base.capture, profiles: base.profiles, actions: base.actions)
+        assertError(.valueOutOfRange, in: nanOpacity)
+
+        let infiniteProfile = AppConfig(
+            general: base.general, server: base.server, capture: base.capture,
+            profiles: [
+                Profile(
+                    id: "local", provider: .openai, baseURL: URL(string: "http://127.0.0.1")!,
+                    model: "test", apiKeyRef: "", temperature: .infinity, maxTokens: 100, timeoutSec: 30,
+                    priceInput: nil, priceOutput: nil)
+            ],
+            actions: base.actions)
+        assertError(.valueOutOfRange, in: infiniteProfile)
+
+        let nanOverride = AppConfig(
+            general: base.general, server: base.server, capture: base.capture, profiles: base.profiles,
+            actions: [
+                Action(
+                    id: "ask", name: "Ask", hotkey: nil, profileId: "local", systemPrompt: nil,
+                    userPrompt: "{{input}}", input: .prompt, sessionMode: .dedicated, timeoutSec: nil,
+                    autoShow: true, notifyOnDone: false,
+                    overrides: ParamOverrides(temperature: .nan, maxTokens: nil, model: nil))
+            ])
+        assertError(.valueOutOfRange, in: nanOverride)
+    }
+
+    func testConfigValidatorRejectsNonPositiveActionTimeout() {
+        let base = validConfig()
+        let action = Action(
+            id: "ask", name: "Ask", hotkey: nil, profileId: "local", systemPrompt: nil,
+            userPrompt: "{{input}}", input: .prompt, sessionMode: .dedicated, timeoutSec: 0,
+            autoShow: true, notifyOnDone: false, overrides: nil)
         let config = AppConfig(
             general: base.general, server: base.server, capture: base.capture,
-            profiles: base.profiles, actions: base.actions, tails: [tail])
-        assertError(.invalidTailConfig, in: config)
+            profiles: base.profiles, actions: [action])
+        assertError(.valueOutOfRange, in: config)
+    }
+
+    func testConfigLoaderParseErrorReportsLineForNonSyntaxTOMLFailure() {
+        let text = """
+            [general]
+            theme = "tokyo-night"
+            theme = "nord"
+            """
+        XCTAssertThrowsError(try ConfigLoader().parse(text)) { error in
+            let message = (error as? ConfigError)?.userMessage ?? String(describing: error)
+            XCTAssertTrue(message.contains("第3行"), message)
+            // TOMLDecoder 对同表重复键按行号报错（badKey/keyExists 形态均可）。
+            XCTAssertTrue(
+                message.contains("键名格式错误") || message.contains("键重复定义"), message)
+        }
     }
 
     func testConfigValidatorChecksActionOverrides() {
         let base = validConfig()
         let action = Action(
             id: "ask", name: "Ask", hotkey: nil, profileId: "local", systemPrompt: nil,
-            userPrompt: "{{input}}", input: .prompt, attachTo: .newSession, autoShow: true,
+            userPrompt: "{{input}}", input: .prompt, sessionMode: .dedicated, timeoutSec: nil, autoShow: true,
             notifyOnDone: false,
             overrides: ParamOverrides(temperature: 2.5, maxTokens: 0, model: "  "))
         let config = AppConfig(
             general: base.general, server: base.server, capture: base.capture,
-            profiles: base.profiles, actions: [action], tails: [])
+            profiles: base.profiles, actions: [action])
         assertError(.valueOutOfRange, in: config)
     }
 
@@ -522,7 +602,7 @@ final class InfrastructureTests: XCTestCase {
             profile = "local"
             userPrompt = "请总结：{{input}}"
             input = "prompt"
-            attachTo = "newSession"
+            sessionMode = "dedicated"
             """
         try configText.write(to: url, atomically: true, encoding: .utf8)
         let config = try ConfigStore(loader: ConfigLoader(configURL: url))
@@ -568,7 +648,7 @@ final class InfrastructureTests: XCTestCase {
             profile = "local"
             userPrompt = "请总结以下选中内容：{{selection}}"
             input = "selection"
-            attachTo = "newSession"
+            sessionMode = "dedicated"
             """
         try configText.write(to: url, atomically: true, encoding: .utf8)
         let config = try ConfigStore(loader: ConfigLoader(configURL: url))

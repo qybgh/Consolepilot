@@ -353,20 +353,14 @@ final class SettingsEditorView: NSView, NSTextViewDelegate {
         # systemPrompt = "你是一个简洁的助手。"
         # userPrompt = "请总结以下内容：{{input}}"
         # input = "selection"
-        # attachTo = "newSession"
+        # sessionMode = "dedicated"
+        # timeoutSec = 120
         # autoShow = true
         # notifyOnDone = false
         # [actions.overrides]
         # temperature = 0.2
         # maxTokens = 1200
         # model = "gpt-4o-mini"
-
-        # Tail：enabled=true 的日志会在 App 中持续写入日志会话。
-        # [[tails]]
-        # path = "~/Library/Logs/my-app.log"
-        # enabled = true
-        # format = "text"
-        # fromEnd = true
         """
     }
 }

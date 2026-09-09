@@ -8,13 +8,12 @@ final class RepositoryContractTests: XCTestCase {
         AppConfig(
             general: GeneralConfig(
                 port: port, theme: "tokyo-night", opacity: 0.92, alwaysOnTop: true,
-                fontName: "SF Mono", fontSize: 13, compactFontSize: 11, scrollbackLines: 100_000,
-                launchAtLogin: false, toggleHotkey: ""),
+                fontName: "SF Mono", fontSize: 13, compactFontSize: 11, scrollbackLines: 100_000),
             server: ServerConfig(authTokenRef: "${env:CONSOLEPILOT_TEST_SECRET}", maxBodyBytes: 1_048_576),
             capture: CaptureConfig(
                 strategy: [.clipboard], simulatedCopyWait: .milliseconds(120), restoreClipboard: true,
                 maxInputChars: 40_000, excludeBundleIds: []),
-            profiles: [], actions: [], tails: [])
+            profiles: [], actions: [])
     }
 
     func testSessionRepositoryContractPinsSessionAndMessageLifecycle() throws {

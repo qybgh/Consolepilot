@@ -58,6 +58,7 @@ package struct ConfigLoader {
             guard let normalized = String(bytes: Array(text.utf8), encoding: .utf8) else {
                 throw ConfigError.invalid("配置文本不是有效 UTF-8")
             }
+            try Self.rejectDeprecatedActionFields(in: normalized)
             try Self.preflightNumericFields(in: normalized)
             let document = try TOMLDecoder().decode(RawConfig.self, from: normalized)
             return try document.makeConfig()
@@ -77,26 +78,71 @@ package struct ConfigLoader {
         } else {
             description = String(describing: error)
         }
-        let pattern = #"Line\s+(\d+).*?Syntax error:\s*(.*)"#
-        if let regex = try? NSRegularExpression(pattern: pattern),
+        if let lineAndMessage = Self.extractLine(description) {
+            return "第\(lineAndMessage.line)行：\(Self.localize(lineAndMessage.message))"
+        }
+        return "TOML 格式错误，请检查引号、逗号和括号"
+    }
+
+    /// 从 TOMLDecoder 错误描述提取行号与原始原因；返回 nil 表示无行号信息。
+    private static func extractLine(_ description: String) -> (line: Int, message: String)? {
+        let pattern = #"\(Line\s+(\d+)\)\s*(.*)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern),
             let match = regex.firstMatch(
                 in: description, range: NSRange(description.startIndex..., in: description)),
             let lineRange = Range(match.range(at: 1), in: description),
-            let messageRange = Range(match.range(at: 2), in: description)
-        {
-            let line = description[lineRange]
-            let rawMessage = String(description[messageRange])
-            let message: String
-            if rawMessage.localizedCaseInsensitiveContains("unterminated triple-d-quote") {
-                message = "多行字符串三引号未闭合"
-            } else if rawMessage.localizedCaseInsensitiveContains("unterminated") {
-                message = "字符串未闭合"
-            } else {
-                message = "TOML 语法错误"
-            }
-            return "第\(line)行：\(message)"
+            let messageRange = Range(match.range(at: 2), in: description),
+            let line = Int(description[lineRange])
+        else { return nil }
+        return (line, String(description[messageRange]))
+    }
+
+    /// 把 TOMLDecoder 的英文原因映射为面向用户的中文短句。
+    private static func localize(_ rawMessage: String) -> String {
+        if rawMessage.localizedCaseInsensitiveContains("unterminated triple-d-quote") {
+            return "多行字符串三引号未闭合"
         }
-        return "TOML 格式错误，请检查引号、逗号和括号"
+        if rawMessage.localizedCaseInsensitiveContains("unterminated") {
+            return "字符串未闭合"
+        }
+        if rawMessage.localizedCaseInsensitiveContains("syntax error") {
+            return "TOML 语法错误"
+        }
+        if rawMessage.localizedCaseInsensitiveContains("invalid float") {
+            return "数值格式无效（应为小数）"
+        }
+        if rawMessage.localizedCaseInsensitiveContains("invalid integer") {
+            return "数值格式无效（应为整数）"
+        }
+        if rawMessage.localizedCaseInsensitiveContains("invalid boolean") {
+            return "布尔值格式无效（应为 true 或 false）"
+        }
+        if rawMessage.localizedCaseInsensitiveContains("type mismatch") {
+            return "字段类型与配置不符"
+        }
+        if rawMessage.localizedCaseInsensitiveContains("ill-formed key") {
+            return "键名格式错误"
+        }
+        if rawMessage.localizedCaseInsensitiveContains("already exists") {
+            return "键重复定义"
+        }
+        return "TOML 格式错误"
+    }
+
+    /// 旧 `attachTo` 字段已废弃为 `sessionMode`：任何残留值都必须迁移，
+    /// 否则后台独立会话语义会被旧配置静默破坏。报错必须带行号与改法。
+    private static func rejectDeprecatedActionFields(in text: String) throws {
+        let pattern = #"^\s*attachTo\s*="#
+        let lines = text.split(separator: "\n", omittingEmptySubsequences: false)
+        let hits = lines.enumerated().compactMap { index, rawLine -> Int? in
+            let line = String(rawLine)
+            guard line.range(of: pattern, options: .regularExpression) != nil else { return nil }
+            return index + 1
+        }
+        guard !hits.isEmpty else { return }
+        let listed = hits.map(String.init).joined(separator: "、")
+        throw ConfigError.invalid(
+            "第\(listed)行：attachTo 已废弃。请删除该行，并改为 sessionMode = \"dedicated\"（本轮仅支持 dedicated）")
     }
 
     /// TOMLDecoder 0.3 force-unwraps while unpacking malformed integer
@@ -167,7 +213,6 @@ private struct RawConfig: Decodable {
     let capture: RawCapture?
     let profiles: [RawProfile]?
     let actions: [RawAction]?
-    let tails: [RawTail]?
 
     func makeConfig() throws -> AppConfig {
         let general = general ?? RawGeneral()
@@ -178,16 +223,14 @@ private struct RawConfig: Decodable {
             server: server.makeConfig(),
             capture: try capture.makeConfig(),
             profiles: try (profiles ?? []).map { try $0.makeConfig() },
-            actions: try (actions ?? []).map { try $0.makeConfig() },
-            tails: try (tails ?? []).map { try $0.makeConfig() }
+            actions: try (actions ?? []).map { try $0.makeConfig() }
         )
     }
 }
 
 private struct RawGeneral: Decodable {
     private enum CodingKeys: String, CodingKey {
-        case port, theme, opacity, alwaysOnTop, fontName, fontSize, compactFontSize, scrollbackLines, launchAtLogin,
-            toggleHotkey, allowRealProvider
+        case port, theme, opacity, alwaysOnTop, fontName, fontSize, compactFontSize, scrollbackLines, allowRealProvider
     }
     // Decode as Int first. TOMLDecoder 0.3 has a force-unwrap bug in its
     // UInt16 decoding path, which can terminate the process even for a valid
@@ -200,8 +243,6 @@ private struct RawGeneral: Decodable {
     var fontSize = 13.0
     var compactFontSize = 11.0
     var scrollbackLines = 100_000
-    var launchAtLogin = false
-    var toggleHotkey = ""
     var allowRealProvider = false
 
     init() {}
@@ -216,8 +257,6 @@ private struct RawGeneral: Decodable {
         fontSize = try values.decodeIfPresent(Double.self, forKey: .fontSize) ?? 13
         compactFontSize = try values.decodeIfPresent(Double.self, forKey: .compactFontSize) ?? 11
         scrollbackLines = try values.decodeIfPresent(Int.self, forKey: .scrollbackLines) ?? 100_000
-        launchAtLogin = try values.decodeIfPresent(Bool.self, forKey: .launchAtLogin) ?? false
-        toggleHotkey = try values.decodeIfPresent(String.self, forKey: .toggleHotkey) ?? ""
         allowRealProvider = try values.decodeIfPresent(Bool.self, forKey: .allowRealProvider) ?? false
     }
 
@@ -226,14 +265,12 @@ private struct RawGeneral: Decodable {
             return GeneralConfig(
                 port: 0, theme: theme, opacity: opacity, alwaysOnTop: alwaysOnTop,
                 fontName: fontName, fontSize: fontSize, compactFontSize: compactFontSize,
-                scrollbackLines: scrollbackLines, launchAtLogin: launchAtLogin, toggleHotkey: toggleHotkey,
-                allowRealProvider: allowRealProvider)
+                scrollbackLines: scrollbackLines, allowRealProvider: allowRealProvider)
         }
         return GeneralConfig(
             port: UInt16(port), theme: theme, opacity: opacity, alwaysOnTop: alwaysOnTop,
             fontName: fontName, fontSize: fontSize, compactFontSize: compactFontSize,
-            scrollbackLines: scrollbackLines, launchAtLogin: launchAtLogin, toggleHotkey: toggleHotkey,
-            allowRealProvider: allowRealProvider)
+            scrollbackLines: scrollbackLines, allowRealProvider: allowRealProvider)
     }
 }
 
@@ -331,7 +368,8 @@ private struct RawProfile: Decodable {
 
 private struct RawAction: Decodable {
     private enum CodingKeys: String, CodingKey {
-        case id, name, hotkey, profile, systemPrompt, userPrompt, input, attachTo, autoShow, notifyOnDone, overrides
+        case id, name, hotkey, profile, systemPrompt, userPrompt, input, sessionMode, timeoutSec, autoShow,
+            notifyOnDone, overrides
     }
     let id: String
     let name: String
@@ -340,7 +378,8 @@ private struct RawAction: Decodable {
     var systemPrompt: String?
     let userPrompt: String
     var input: String = "selection"
-    var attachTo: String = "newSession"
+    var sessionMode = "dedicated"
+    var timeoutSec: Int?
     var autoShow = true
     var notifyOnDone = false
     var overrides: RawOverrides?
@@ -354,20 +393,24 @@ private struct RawAction: Decodable {
         systemPrompt = try values.decodeIfPresent(String.self, forKey: .systemPrompt)
         userPrompt = try values.decode(String.self, forKey: .userPrompt)
         input = try values.decodeIfPresent(String.self, forKey: .input) ?? "selection"
-        attachTo = try values.decodeIfPresent(String.self, forKey: .attachTo) ?? "newSession"
+        sessionMode = try values.decodeIfPresent(String.self, forKey: .sessionMode) ?? "dedicated"
+        timeoutSec = try values.decodeIfPresent(Int.self, forKey: .timeoutSec)
         autoShow = try values.decodeIfPresent(Bool.self, forKey: .autoShow) ?? true
         notifyOnDone = try values.decodeIfPresent(Bool.self, forKey: .notifyOnDone) ?? false
         overrides = try values.decodeIfPresent(RawOverrides.self, forKey: .overrides)
     }
 
     func makeConfig() throws -> Action {
-        guard let input = InputSource(rawValue: input), let attachTo = AttachMode(rawValue: attachTo) else {
-            throw ConfigError.invalid("Action \(id) 的 input 或 attachTo 无效")
+        guard let input = InputSource(rawValue: input) else {
+            throw ConfigError.invalid("Action \(id) 的 input 无效：\(input)")
+        }
+        guard let sessionMode = SessionMode(rawValue: sessionMode) else {
+            throw ConfigError.invalid("Action \(id) 的 sessionMode 无效：\(sessionMode)（本轮仅支持 dedicated）")
         }
         return Action(
             id: id, name: name, hotkey: hotkey, profileId: profile, systemPrompt: systemPrompt,
-            userPrompt: userPrompt, input: input, attachTo: attachTo, autoShow: autoShow,
-            notifyOnDone: notifyOnDone, overrides: overrides?.makeConfig())
+            userPrompt: userPrompt, input: input, sessionMode: sessionMode, timeoutSec: timeoutSec,
+            autoShow: autoShow, notifyOnDone: notifyOnDone, overrides: overrides?.makeConfig())
     }
 }
 
@@ -376,26 +419,7 @@ private struct RawOverrides: Decodable {
     var maxTokens: Int?
     var model: String?
 
-    func makeConfig() -> ParamOverrides { ParamOverrides(temperature: temperature, maxTokens: maxTokens, model: model) }
-}
-
-private struct RawTail: Decodable {
-    private enum CodingKeys: String, CodingKey { case path, enabled, format, fromEnd }
-    let path: String
-    var enabled = false
-    var format = "text"
-    var fromEnd = true
-
-    init(from decoder: Decoder) throws {
-        let values = try decoder.container(keyedBy: CodingKeys.self)
-        path = try values.decode(String.self, forKey: .path)
-        enabled = try values.decodeIfPresent(Bool.self, forKey: .enabled) ?? false
-        format = try values.decodeIfPresent(String.self, forKey: .format) ?? "text"
-        fromEnd = try values.decodeIfPresent(Bool.self, forKey: .fromEnd) ?? true
-    }
-
-    func makeConfig() throws -> TailConfig {
-        guard let format = TailFormat(rawValue: format) else { throw ConfigError.invalid("Tail format 无效") }
-        return TailConfig(path: path, enabled: enabled, format: format, fromEnd: fromEnd)
+    func makeConfig() -> ParamOverrides {
+        ParamOverrides(temperature: temperature, maxTokens: maxTokens, model: model)
     }
 }
