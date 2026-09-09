@@ -1,15 +1,13 @@
 import Foundation
-import GRDB
 
-struct Message: Identifiable, Sendable, Equatable, Codable, FetchableRecord, MutablePersistableRecord {
+/// 消息领域实体（纯值类型；持久化映射见 `MessageRecord`）。
+struct Message: Identifiable, Sendable, Equatable {
     let id: String
     let sessionId: String
     let role: MessageRole
     var content: String
     var state: MessageState
     let createdAt: Date
-
-    static let databaseTableName = "messages"
 
     init(
         id: String = UUID().uuidString, sessionId: String, role: MessageRole, content: String,
@@ -22,30 +20,12 @@ struct Message: Identifiable, Sendable, Equatable, Codable, FetchableRecord, Mut
         self.state = state
         self.createdAt = createdAt
     }
-
-    init(row: Row) throws {
-        id = row["id"]
-        sessionId = row["session_id"]
-        role = MessageRole(rawValue: row["role"] as String) ?? .system
-        content = row["content"]
-        state = MessageState(rawValue: row["state"] as String) ?? .failed
-        createdAt = row["created_at"]
-    }
-
-    func encode(to container: inout PersistenceContainer) throws {
-        container["id"] = id
-        container["session_id"] = sessionId
-        container["role"] = role.rawValue
-        container["content"] = content
-        container["state"] = state.rawValue
-        container["created_at"] = createdAt
-    }
 }
 
-enum MessageRole: String, Sendable, CaseIterable, Codable { case system, user, assistant, tool }
-enum MessageState: String, Sendable, Codable { case complete, interrupted, failed }
+enum MessageRole: String, Sendable, CaseIterable { case system, user, assistant, tool }
+enum MessageState: String, Sendable { case complete, interrupted, failed }
 
-struct MessageHeader: Sendable, Equatable, Codable {
+struct MessageHeader: Sendable, Equatable {
     let timestamp: Date
     let role: MessageRole
     let channel: SessionChannel

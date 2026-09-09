@@ -14,9 +14,10 @@ final class SessionStore {
     init(database: AppDatabase) throws {
         self.database = database
         let loadedSessions = try database.writer.read { db in
-            try Session
-                .order(Session.Columns.updatedAt.desc, Session.Columns.id.desc)
+            try SessionRecord
+                .order(SessionRecord.Columns.updatedAt.desc, SessionRecord.Columns.id.desc)
                 .fetchAll(db)
+                .map(\.entity)
         }
         let loadedCurrentId = loadedSessions.first?.id
         let loadedPage =
@@ -30,9 +31,10 @@ final class SessionStore {
     }
 
     func create(channel: SessionChannel, title: String, meta: SessionMeta) -> Session {
-        var session = Session(channel: channel, title: title, meta: meta)
+        let session = Session(channel: channel, title: title, meta: meta)
         do {
-            try database.writer.write { db in try session.insert(db) }
+            var record = SessionRecord(session)
+            try database.writer.write { db in try record.insert(db) }
             sessions.insert(session, at: 0)
             currentId = session.id
             messages = []
@@ -79,14 +81,15 @@ final class SessionStore {
         session.title = title
         session.updatedAt = Date()
         do {
-            try database.writer.write { db in try session.update(db) }
+            let record = SessionRecord(session)
+            try database.writer.write { db in try record.update(db) }
             sessions[index] = session
         } catch { Log.error("重命名会话失败：\(error)", category: .domain) }
     }
 
     func delete(_ id: String) {
         do {
-            _ = try database.writer.write { db in try Session.deleteOne(db, key: id) }
+            _ = try database.writer.write { db in try SessionRecord.deleteOne(db, key: id) }
             sessions.removeAll { $0.id == id }
             if currentId == id {
                 currentId = sessions.first?.id
@@ -105,7 +108,7 @@ final class SessionStore {
 
     func deleteAll() {
         do {
-            _ = try database.writer.write { db in try Session.deleteAll(db) }
+            _ = try database.writer.write { db in try SessionRecord.deleteAll(db) }
             sessions.removeAll()
             currentId = nil
             messages.removeAll()
@@ -115,14 +118,10 @@ final class SessionStore {
 
     func appendMessage(_ message: Message) {
         do {
-            var persisted = message
-            try database.writer.write { db in try persisted.insert(db) }
+            var record = MessageRecord(message)
+            try database.writer.write { db in try record.insert(db) }
             if message.sessionId == currentId { messages.append(message) }
-            if let index = sessions.firstIndex(where: { $0.id == message.sessionId }) {
-                sessions[index].updatedAt = message.createdAt
-                try? database.writer.write { db in try sessions[index].update(db) }
-                sortSessions()
-            }
+            touchSession(message.sessionId, at: message.createdAt, force: true)
         } catch { Log.error("保存消息失败：\(error)", category: .domain) }
     }
 
@@ -131,10 +130,8 @@ final class SessionStore {
     /// an app restart without creating duplicate assistant messages.
     func upsertMessage(_ message: Message) {
         do {
-            var persisted = message
-            try database.writer.write { db in
-                try persisted.save(db)
-            }
+            var record = MessageRecord(message)
+            try database.writer.write { db in try record.save(db) }
             if message.sessionId == currentId {
                 if let index = messages.firstIndex(where: { $0.id == message.id }) {
                     messages[index] = message
@@ -142,14 +139,20 @@ final class SessionStore {
                     messages.append(message)
                 }
             }
-            if let index = sessions.firstIndex(where: { $0.id == message.sessionId }) {
-                if message.createdAt > sessions[index].updatedAt {
-                    sessions[index].updatedAt = message.createdAt
-                    try? database.writer.write { db in try sessions[index].update(db) }
-                }
-                sortSessions()
-            }
+            touchSession(message.sessionId, at: message.createdAt, force: false)
         } catch { Log.error("保存流式检查点失败：\(error)", category: .domain) }
+    }
+
+    /// 消息落库后推进会话的 `updatedAt` 并重排。新消息强制推进；
+    /// 检查点仅在其时间晚于会话时间时推进，避免旧检查点覆盖更新。
+    private func touchSession(_ sessionId: String, at date: Date, force: Bool) {
+        guard let index = sessions.firstIndex(where: { $0.id == sessionId }),
+            force || date > sessions[index].updatedAt
+        else { return }
+        sessions[index].updatedAt = date
+        let record = SessionRecord(sessions[index])
+        try? database.writer.write { db in try record.update(db) }
+        sortSessions()
     }
 
     private func sortSessions() {
@@ -161,10 +164,14 @@ final class SessionStore {
 
     func search(_ query: String) -> [Message] {
         guard !query.isEmpty else { return [] }
+        let escaped = query.replacingOccurrences(of: "%", with: "\\%")
         do {
             return try database.writer.read { db in
-                try Message.filter(Column("content").like("%\(query.replacingOccurrences(of: "%", with: "\\%"))%"))
-                    .order(Column("created_at").desc).fetchAll(db)
+                try MessageRecord
+                    .filter(Column("content").like("%\(escaped)%"))
+                    .order(Column("created_at").desc)
+                    .fetchAll(db)
+                    .map(\.entity)
             }
         } catch {
             Log.error("搜索消息失败：\(error)", category: .domain)
@@ -180,11 +187,12 @@ final class SessionStore {
         database: AppDatabase, sessionId: String, offset: Int
     ) throws -> [Message] {
         try database.writer.read { db in
-            try Message
+            try MessageRecord
                 .filter(Column("session_id") == sessionId)
                 .order(Column("created_at").desc, Column("id").desc)
                 .limit(messagePageSize + 1, offset: offset)
                 .fetchAll(db)
+                .map(\.entity)
         }
     }
 }

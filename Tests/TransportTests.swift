@@ -167,7 +167,7 @@ final class TransportTests: XCTestCase {
         await coordinator.consume(events, into: session.id)
         XCTAssertFalse(coordinator.isStreaming)
         XCTAssertEqual(sessions.messages.last?.content.count, 1_000)
-        let count = try await database.writer.read { db in try Message.fetchCount(db) }
+        let count = try await database.writer.read { db in try MessageRecord.fetchCount(db) }
         XCTAssertEqual(count, 1)
     }
 
@@ -291,7 +291,7 @@ final class TransportTests: XCTestCase {
         continuation.finish()
         await task.value
 
-        let stored = try await database.writer.read { db in try Message.fetchAll(db) }
+        let stored = try await database.writer.read { db in try MessageRecord.fetchAll(db).map(\.entity) }
         XCTAssertEqual(stored.count, 1)
         XCTAssertEqual(stored[0].content, "prefix-完整-")
         XCTAssertEqual(stored[0].state, .interrupted)
@@ -342,7 +342,7 @@ final class TransportTests: XCTestCase {
         firstContinuation.finish()
         await firstTask.value
         XCTAssertEqual(emitted[first.id], "def")
-        let stored = try await database.writer.read { db in try Message.fetchAll(db) }
+        let stored = try await database.writer.read { db in try MessageRecord.fetchAll(db).map(\.entity) }
         XCTAssertEqual(stored.first(where: { $0.sessionId == first.id })?.content, "abcdef")
         XCTAssertEqual(stored.first(where: { $0.sessionId == second.id })?.content, "xyz")
     }
@@ -367,7 +367,7 @@ final class TransportTests: XCTestCase {
 
         await coordinator.consume(events, into: session.id)
 
-        let stored = try await database.writer.read { db in try Message.fetchAll(db) }
+        let stored = try await database.writer.read { db in try MessageRecord.fetchAll(db).map(\.entity) }
         XCTAssertEqual(stored.count, 1)
         XCTAssertEqual(stored.first?.content, "early prefix")
         XCTAssertEqual(stored.first?.state, .interrupted)

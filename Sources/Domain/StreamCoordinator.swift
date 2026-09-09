@@ -167,7 +167,7 @@ final class StreamCoordinator {
             context.inputTokens > 0 || context.outputTokens > 0
         else { return }
         usageStore.record(
-            UsageRecord(
+            Usage(
                 sessionId: sessionId, actionId: session.actionId, profileId: profileId,
                 provider: provider, model: model, inputTokens: context.inputTokens,
                 outputTokens: context.outputTokens,

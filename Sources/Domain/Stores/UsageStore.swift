@@ -18,17 +18,17 @@ final class UsageStore {
 
     init(database: AppDatabase) { self.database = database }
 
-    func record(_ usage: UsageRecord) {
+    func record(_ usage: Usage) {
         do {
-            var persisted = usage
-            try database.writer.write { db in try persisted.insert(db) }
+            var record = UsageRecord(usage)
+            try database.writer.write { db in try record.insert(db) }
         } catch { Log.error("保存用量失败：\(error)", category: .domain) }
     }
 
     func summary(period: UsagePeriod) -> UsageSummary {
         do {
             let records = try database.writer.read { db in
-                try UsageRecord.fetchAll(db)
+                try UsageRecord.fetchAll(db).map(\.entity)
             }.filter { record in
                 guard period != .all else { return true }
                 let interval: TimeInterval = period == .today ? 86_400 : 7 * 86_400
@@ -41,16 +41,14 @@ final class UsageStore {
         }
     }
 
-    private static func makeSummary(_ records: [UsageRecord]) -> UsageSummary {
+    private static func makeSummary(_ records: [Usage]) -> UsageSummary {
         let grouped = Dictionary(grouping: records, by: \.model)
         let byModel = grouped.mapValues { makeTotals($0, byModel: [:]) }
         return makeTotals(records, byModel: byModel)
     }
 
-    private static func makeTotals(
-        _ records: [UsageRecord], byModel: [String: UsageSummary]
-    ) -> UsageSummary {
-        return UsageSummary(
+    private static func makeTotals(_ records: [Usage], byModel: [String: UsageSummary]) -> UsageSummary {
+        UsageSummary(
             inputTokens: records.reduce(0) { $0 + $1.inputTokens },
             outputTokens: records.reduce(0) { $0 + $1.outputTokens },
             costUSD: records.compactMap(\.costUSD).reduce(0, +),

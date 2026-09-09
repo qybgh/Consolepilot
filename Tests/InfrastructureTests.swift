@@ -606,7 +606,7 @@ final class InfrastructureTests: XCTestCase {
                 text: sensitiveText, strategy: .clipboard, sourceApp: "Notes",
                 sourceBundleId: "com.apple.Notes", windowTitle: "Secret",
                 wasTruncated: false, originalLength: sensitiveText.count, elapsed: .milliseconds(4)))
-        let row = try await database.writer.read { db in try CaptureLogEntry.fetchOne(db) }
+        let row = try await database.writer.read { db in try CaptureLogRecord.fetchOne(db)?.entity }
         XCTAssertEqual(row?.characterCount, sensitiveText.count)
         XCTAssertEqual(row?.sourceApp, "Notes")
         let columns = try await database.writer.read { db in

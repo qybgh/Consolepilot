@@ -61,8 +61,8 @@ final class RepositoryContractTests: XCTestCase {
 
     func testUsageRepositoryContractPinsRecordingAndAggregation() throws {
         let repository = MemoryUsageRepository()
-        let first = UsageRecord(profileId: "local", provider: .openai, model: "m1", inputTokens: 10, outputTokens: 1)
-        let second = UsageRecord(profileId: "local", provider: .openai, model: "m1", inputTokens: 20, outputTokens: 2)
+        let first = Usage(profileId: "local", provider: .openai, model: "m1", inputTokens: 10, outputTokens: 1)
+        let second = Usage(profileId: "local", provider: .openai, model: "m1", inputTokens: 20, outputTokens: 2)
 
         try repository.record(first)
         try repository.record(second)
@@ -153,14 +153,14 @@ private final class MemorySessionRepository: SessionRepository {
 }
 
 private final class MemoryUsageRepository: UsageRepository {
-    private var records: [UsageRecord] = []
+    private var records: [Usage] = []
 
-    func record(_ usage: UsageRecord) throws {
+    func record(_ usage: Usage) throws {
         records.append(usage)
     }
 
     func fetchSummary(period: UsagePeriod) throws -> UsageSummary {
-        let filtered: [UsageRecord]
+        let filtered: [Usage]
         if period == .all {
             filtered = records
         } else {

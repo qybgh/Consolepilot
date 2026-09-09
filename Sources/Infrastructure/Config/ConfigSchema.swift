@@ -62,8 +62,6 @@ struct CaptureConfig: Sendable, Equatable {
     let excludeBundleIds: Set<String>
 }
 
-enum CaptureStrategy: String, Sendable, CaseIterable, Codable { case accessibility, simulatedCopy, clipboard }
-
 struct Profile: Sendable, Equatable, Identifiable {
     let id: String
     let provider: ProviderKind
@@ -76,8 +74,6 @@ struct Profile: Sendable, Equatable, Identifiable {
     let priceInput: Double?
     let priceOutput: Double?
 }
-
-enum ProviderKind: String, Sendable, CaseIterable, Codable { case openai, anthropic }
 
 struct Action: Sendable, Equatable, Identifiable {
     let id: String

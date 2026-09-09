@@ -11,6 +11,12 @@ final class DatabaseTests: XCTestCase {
         return try AppDatabase(path: path)
     }
 
+    private func makeSession(channel: SessionChannel = .console, title: String) -> Session {
+        Session(
+            channel: channel, title: title,
+            meta: SessionMeta(actionId: nil, profileId: nil, provider: nil, model: nil, sourceApp: nil))
+    }
+
     func testMigrationIsIdempotentAndEnablesWALAndForeignKeys() throws {
         let database = try makeDatabase()
         try Migrations.migrator.migrate(database.writer)
@@ -32,13 +38,15 @@ final class DatabaseTests: XCTestCase {
         let entry = CaptureLogEntry(
             sourceApp: "Notes", sourceBundleId: "com.apple.Notes", characterCount: 12,
             strategy: .accessibility, elapsed: .milliseconds(3))
-        var persisted = entry
-        try database.writer.write { db in try persisted.insert(db) }
+        var record = CaptureLogRecord(entry)
+        try database.writer.write { db in try record.insert(db) }
         let columns = try database.writer.read { db in
             try Row.fetchAll(db, sql: "PRAGMA table_info(capture_log)").compactMap { row -> String? in row["name"] }
         }
         XCTAssertFalse(columns.contains("content"))
-        let loaded = try database.writer.read { db in try CaptureLogEntry.fetchOne(db, key: entry.id) }
+        let loaded = try database.writer.read { db in
+            try CaptureLogRecord.fetchOne(db, key: entry.id)?.entity
+        }
         XCTAssertEqual(loaded?.id, entry.id)
         XCTAssertEqual(loaded?.characterCount, entry.characterCount)
         XCTAssertEqual(loaded?.strategy, entry.strategy)
@@ -48,16 +56,16 @@ final class DatabaseTests: XCTestCase {
 
     func testSessionCascadeDeletesMessages() throws {
         let database = try makeDatabase()
-        var session = Session(
-            channel: .console, title: "Test",
-            meta: SessionMeta(actionId: nil, profileId: nil, provider: nil, model: nil, sourceApp: nil))
-        var message = Message(sessionId: session.id, role: .user, content: "hello")
+        let session = makeSession(title: "Test")
+        let message = Message(sessionId: session.id, role: .user, content: "hello")
+        var sessionRecord = SessionRecord(session)
+        var messageRecord = MessageRecord(message)
         try database.writer.write { db in
-            try session.insert(db)
-            try message.insert(db)
+            try sessionRecord.insert(db)
+            try messageRecord.insert(db)
         }
-        _ = try database.writer.write { db in try Session.deleteOne(db, key: session.id) }
-        let count = try database.writer.read { db in try Message.fetchCount(db) }
+        _ = try database.writer.write { db in try SessionRecord.deleteOne(db, key: session.id) }
+        let count = try database.writer.read { db in try MessageRecord.fetchCount(db) }
         XCTAssertEqual(count, 0)
     }
 
@@ -91,7 +99,7 @@ final class DatabaseTests: XCTestCase {
         XCTAssertNil(store.currentId)
         XCTAssertTrue(store.messages.isEmpty)
         let counts = try database.writer.read { db in
-            (try Session.fetchCount(db), try Message.fetchCount(db))
+            (try SessionRecord.fetchCount(db), try MessageRecord.fetchCount(db))
         }
         XCTAssertEqual(counts.0, 0)
         XCTAssertEqual(counts.1, 0)
@@ -100,15 +108,15 @@ final class DatabaseTests: XCTestCase {
     @MainActor
     func testSessionStorePaginatesMessagesNewestFirstButPresentsChronologically() throws {
         let database = try makeDatabase()
-        var session = Session(
-            channel: .console, title: "Paged",
-            meta: SessionMeta(actionId: nil, profileId: nil, provider: nil, model: nil, sourceApp: nil))
+        let session = makeSession(title: "Paged")
+        var sessionRecord = SessionRecord(session)
         try database.writer.write { db in
-            try session.insert(db)
+            try sessionRecord.insert(db)
             for index in 0..<55 {
-                var message = Message(
-                    id: String(format: "%03d", index), sessionId: session.id, role: .user,
-                    content: "message-\(index)", createdAt: Date(timeIntervalSince1970: Double(index)))
+                var message = MessageRecord(
+                    Message(
+                        id: String(format: "%03d", index), sessionId: session.id, role: .user,
+                        content: "message-\(index)", createdAt: Date(timeIntervalSince1970: Double(index))))
                 try message.insert(db)
             }
         }
@@ -133,15 +141,15 @@ final class DatabaseTests: XCTestCase {
 
     func testTenThousandMessageLatestPageQueryStaysWithinPlanThreshold() throws {
         let database = try makeDatabase()
-        var session = Session(
-            channel: .console, title: "Performance",
-            meta: SessionMeta(actionId: nil, profileId: nil, provider: nil, model: nil, sourceApp: nil))
+        let session = makeSession(title: "Performance")
+        var sessionRecord = SessionRecord(session)
         try database.writer.write { db in
-            try session.insert(db)
+            try sessionRecord.insert(db)
             for index in 0..<10_000 {
-                var message = Message(
-                    id: String(format: "%05d", index), sessionId: session.id, role: .assistant,
-                    content: "message-\(index)", createdAt: Date(timeIntervalSince1970: Double(index)))
+                var message = MessageRecord(
+                    Message(
+                        id: String(format: "%05d", index), sessionId: session.id, role: .assistant,
+                        content: "message-\(index)", createdAt: Date(timeIntervalSince1970: Double(index))))
                 try message.insert(db)
             }
         }
@@ -149,14 +157,14 @@ final class DatabaseTests: XCTestCase {
         // Warm the SQLite page cache, then collect enough samples to avoid a
         // single scheduler hiccup deciding the result.
         _ = try database.writer.read { db in
-            try Message.filter(Column("session_id") == session.id)
+            try MessageRecord.filter(Column("session_id") == session.id)
                 .order(Column("created_at").desc, Column("id").desc).limit(13).fetchAll(db)
         }
         var samples: [Double] = []
         for _ in 0..<30 {
             let start = ContinuousClock.now
             let rows = try database.writer.read { db in
-                try Message.filter(Column("session_id") == session.id)
+                try MessageRecord.filter(Column("session_id") == session.id)
                     .order(Column("created_at").desc, Column("id").desc).limit(13).fetchAll(db)
             }
             XCTAssertEqual(rows.count, 13)
