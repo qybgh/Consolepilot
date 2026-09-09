@@ -1,5 +1,5 @@
-import XCTest
 import Foundation
+import XCTest
 
 @testable import ConsolepilotCore
 
@@ -53,8 +53,9 @@ final class ServerTests: XCTestCase {
         let path = directory.appendingPathComponent("consolepilot-tail-\(UUID().uuidString).log")
         FileManager.default.createFile(atPath: path.path, contents: Data("one\n".utf8))
         let lines = LineCollector()
-        let watcher = FileTailWatcher(config: TailConfig(path: path.path, enabled: true, format: .text, fromEnd: false))
-        { line in
+        let watcher = FileTailWatcher(
+            config: TailConfig(path: path.path, enabled: true, format: .text, fromEnd: false)
+        ) { line in
             Task { await lines.append(line) }
         }
         try await watcher.start()
@@ -73,7 +74,8 @@ final class ServerTests: XCTestCase {
         let missing = FileManager.default.temporaryDirectory
             .appendingPathComponent("consolepilot-missing-\(UUID().uuidString).log")
         let watcher = FileTailWatcher(
-            config: TailConfig(path: missing.path, enabled: true, format: .text, fromEnd: true)) { _ in }
+            config: TailConfig(path: missing.path, enabled: true, format: .text, fromEnd: true)
+        ) { _ in }
         do {
             try await watcher.start()
             XCTFail("expected missing file error")

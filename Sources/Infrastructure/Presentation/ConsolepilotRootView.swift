@@ -91,17 +91,17 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
         localInterruptMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) {
             [weak self] event in
             guard let self,
-                  event.window === self.window,
-                  event.modifierFlags.contains(.control),
-                  !event.modifierFlags.contains(.command),
-                  !event.modifierFlags.contains(.option),
-                  !event.modifierFlags.contains(.shift),
-                  // For Control-C AppKit may expose either the printable
-                  // character or the ETX control character. The hardware
-                  // key code is stable across both representations.
-                  event.keyCode == 8,
-                  let currentId = self.sessionStore?.currentId,
-                  self.coordinator?.isStreaming(sessionId: currentId) == true
+                event.window === self.window,
+                event.modifierFlags.contains(.control),
+                !event.modifierFlags.contains(.command),
+                !event.modifierFlags.contains(.option),
+                !event.modifierFlags.contains(.shift),
+                // For Control-C AppKit may expose either the printable
+                // character or the ETX control character. The hardware
+                // key code is stable across both representations.
+                event.keyCode == 8,
+                let currentId = self.sessionStore?.currentId,
+                self.coordinator?.isStreaming(sessionId: currentId) == true
             else { return event }
             self.handle(.interrupt)
             return nil
@@ -111,7 +111,8 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
     private func trackExternalFrontmostApplication() {
         let ownPID = ProcessInfo.processInfo.processIdentifier
         if let app = NSWorkspace.shared.frontmostApplication,
-           app.processIdentifier != ownPID {
+            app.processIdentifier != ownPID
+        {
             lastExternalProcessID = app.processIdentifier
         }
         frontmostObserverToken = NSWorkspace.shared.notificationCenter.addObserver(
@@ -119,9 +120,11 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
             object: nil,
             queue: .main
         ) { [weak self] notification in
-            guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey]
+            guard
+                let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey]
                     as? NSRunningApplication,
-                  app.processIdentifier != ownPID else { return }
+                app.processIdentifier != ownPID
+            else { return }
             let pid = app.processIdentifier
             Task { @MainActor [weak self] in
                 self?.lastExternalProcessID = pid
@@ -159,7 +162,9 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
         guard let usageStore else { return "用量统计暂不可用" }
         func line(_ title: String, _ period: UsagePeriod) -> String {
             let summary = usageStore.summary(period: period)
-            return "\(title)：\(summary.requestCount) 次请求 · 输入 Token \(summary.inputTokens) · 输出 Token \(summary.outputTokens)"
+            return
+                "\(title)：\(summary.requestCount) 次请求 · 输入 Token \(summary.inputTokens)"
+                + " · 输出 Token \(summary.outputTokens)"
         }
         return [
             line("今日", .today),
@@ -506,7 +511,8 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
         // real narrow window, otherwise a persisted width would be reduced to
         // the minimum on every launch.
         let availableWidth = splitView.bounds.width
-        let maxWidth = availableWidth > 1
+        let maxWidth =
+            availableWidth > 1
             ? min(320, max(140, availableWidth * 0.45))
             : 320
         return min(max(width, 140), maxWidth)
@@ -536,7 +542,8 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
                 // keep the current UI responsive while configuration reloads.
                 guard let self else { return }
                 if let first = store.current.profiles.first,
-                   store.current.profile(id: self.selectedProfileId) == nil {
+                    store.current.profile(id: self.selectedProfileId) == nil
+                {
                     self.selectedProfileId = first.id
                 }
                 self.onProfilesChanged?(self.configuredProfiles())
@@ -569,7 +576,8 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
                 // dispatching the hotkey. Waiting until the async Action task
                 // starts can make Consolepilot appear frontmost, especially
                 // when launched through LaunchServices (`open`).
-                let sourcePID = self.lastExternalProcessID
+                let sourcePID =
+                    self.lastExternalProcessID
                     ?? NSWorkspace.shared.frontmostApplication?.processIdentifier
                 let sourcePIDText = sourcePID.map(String.init) ?? "none"
                 Log.debug(
@@ -719,7 +727,9 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
             Task { [weak self] in
                 do {
                     try await server.start()
-                    await MainActor.run { self?.statusLabel.stringValue = "本地服务已启动 · 127.0.0.1:\(store.current.general.port)" }
+                    await MainActor.run {
+                        self?.statusLabel.stringValue = "本地服务已启动 · 127.0.0.1:\(store.current.general.port)"
+                    }
                 } catch {
                     await MainActor.run { self?.statusLabel.stringValue = "本地服务未启动 · 端口或鉴权配置不可用" }
                 }
@@ -735,8 +745,7 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
         let resolver = SecretResolver()
         var missing: [String] = []
         for profile in config.profiles where !Self.isLoopback(profile.baseURL) {
-            do { _ = try resolver.resolve(profile.apiKeyRef) }
-            catch { missing.append(profile.id) }
+            do { _ = try resolver.resolve(profile.apiKeyRef) } catch { missing.append(profile.id) }
         }
         if !missing.isEmpty {
             statusLabel.stringValue = "Provider 密钥待配置：\(missing.joined(separator: ", "))"
@@ -792,8 +801,11 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
         else { return (400, Data("需要 prompt".utf8)) }
         let session = sessionStore?.create(
             channel: .push, title: "HTTP 推送",
-            meta: SessionMeta(actionId: nil, profileId: "mock", provider: .openai, model: "mock-stream-v1", sourceApp: nil))
-        if let session { sessionStore?.appendMessage(Message(sessionId: session.id, role: .tool, content: payload.prompt)) }
+            meta: SessionMeta(
+                actionId: nil, profileId: "mock", provider: .openai, model: "mock-stream-v1", sourceApp: nil))
+        if let session {
+            sessionStore?.appendMessage(Message(sessionId: session.id, role: .tool, content: payload.prompt))
+        }
         reloadSessionButtons()
         return (202, Data("accepted".utf8))
     }
@@ -802,7 +814,10 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
         let prompt: String
     }
 
-    private struct LocalAction: Codable, Sendable { let actionId: String; let input: String? }
+    private struct LocalAction: Codable, Sendable {
+        let actionId: String
+        let input: String?
+    }
     private struct LocalTail: Codable, Sendable { let path: String }
 
     private func startTail(path: String) throws {
@@ -842,7 +857,8 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
         guard let sessionStore, let coordinator else { return "Consolepilot 尚未就绪" }
         let session = sessionStore.create(
             channel: .cli, title: Self.title(for: prompt),
-            meta: SessionMeta(actionId: nil, profileId: "mock", provider: .openai, model: "mock-stream-v1", sourceApp: nil))
+            meta: SessionMeta(
+                actionId: nil, profileId: "mock", provider: .openai, model: "mock-stream-v1", sourceApp: nil))
         sessionStore.appendMessage(Message(sessionId: session.id, role: .user, content: prompt))
         showSession(session.id)
         renderer.appendHeader(
@@ -850,8 +866,12 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
                 timestamp: Date(), role: .assistant, channel: session.channel,
                 model: session.model, sourceApp: session.sourceApp))
         renderer.showStreamingLoading()
-        let profile = Profile(id: "mock", provider: .openai, baseURL: URL(string: "http://127.0.0.1")!, model: "mock-stream-v1", apiKeyRef: "", temperature: 0, maxTokens: 4096, timeoutSec: 30, priceInput: 0, priceOutput: 0)
-        let request = ChatRequest(profile: profile, apiKey: "", systemPrompt: nil, messages: [ChatMessage(role: .user, content: prompt)], overrides: nil)
+        let profile = Profile(
+            id: "mock", provider: .openai, baseURL: URL(string: "http://127.0.0.1")!, model: "mock-stream-v1",
+            apiKeyRef: "", temperature: 0, maxTokens: 4096, timeoutSec: 30, priceInput: 0, priceOutput: 0)
+        let request = ChatRequest(
+            profile: profile, apiKey: "", systemPrompt: nil, messages: [ChatMessage(role: .user, content: prompt)],
+            overrides: nil)
         await coordinator.consume(mockProvider.stream(request), into: session.id)
         reloadSessionButtons()
         return sessionStore.messages.last(where: { $0.sessionId == session.id && $0.role == .assistant })?.content ?? ""
@@ -891,9 +911,10 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
         } else {
             activeDraft = nil
         }
-        let history = activeDraft.map { draft in
-            sessionStore.messages.filter { $0.id != draft.messageId }
-        } ?? sessionStore.messages
+        let history =
+            activeDraft.map { draft in
+                sessionStore.messages.filter { $0.id != draft.messageId }
+            } ?? sessionStore.messages
         renderer.renderHistory(session: session, messages: history)
         if let session, let draft = activeDraft {
             renderer.renderStreamingDraft(session: session, draft: draft)
@@ -1114,8 +1135,12 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
             return false
         case "/help":
             renderer.clear()
-            renderer.appendHeader(MessageHeader(timestamp: Date(), role: .system, channel: .console, model: nil, sourceApp: nil))
-            renderer.append(TokenBatch(sessionId: "command", text: "/new 新建会话\n/clear 清空当前显示\n/stop 中断当前生成\n/sessions 显示会话数\n/help 显示帮助\n", deltaCount: 1))
+            renderer.appendHeader(
+                MessageHeader(timestamp: Date(), role: .system, channel: .console, model: nil, sourceApp: nil))
+            renderer.append(
+                TokenBatch(
+                    sessionId: "command", text: "/new 新建会话\n/clear 清空当前显示\n/stop 中断当前生成\n/sessions 显示会话数\n/help 显示帮助\n",
+                    deltaCount: 1))
             statusLabel.stringValue = "命令已执行 · /help"
         case "/clear":
             renderer.clear()
@@ -1127,7 +1152,8 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
             statusLabel.stringValue = "当前共有 \(count) 个会话"
         case "/stop":
             guard let currentId = sessionStore?.currentId,
-                  coordinator?.isStreaming(sessionId: currentId) == true else {
+                coordinator?.isStreaming(sessionId: currentId) == true
+            else {
                 statusLabel.stringValue = "当前没有进行中的生成"
                 return true
             }

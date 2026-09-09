@@ -41,7 +41,7 @@ final class TransportTests: XCTestCase {
         URLProtocolStub.handler = { request in
             let response = HTTPURLResponse(
                 url: request.url!, statusCode: 200, httpVersion: nil,
-                headerFields: ["Content-Type": "text/event-stream"] )!
+                headerFields: ["Content-Type": "text/event-stream"])!
             return (response, Data("data: {not-json}\n\n".utf8))
         }
         let configuration = URLSessionConfiguration.ephemeral
@@ -89,7 +89,11 @@ final class TransportTests: XCTestCase {
         var events: [StreamEvent] = []
         for try await event in provider.stream(request) { events.append(event) }
         XCTAssertEqual(events.last, .finished)
-        XCTAssertFalse(events.contains { if case .failed = $0 { return true }; return false })
+        XCTAssertFalse(
+            events.contains {
+                if case .failed = $0 { return true }
+                return false
+            })
         XCTAssertTrue(events.contains { $0 == .delta("ok") })
     }
 
@@ -178,9 +182,15 @@ final class TransportTests: XCTestCase {
             channel: .console, title: "Timing",
             meta: SessionMeta(actionId: nil, profileId: nil, provider: nil, model: nil, sourceApp: nil))
         let coordinator = StreamCoordinator(sessionStore: sessions, usageStore: UsageStore(database: database))
-        var completion: (count: Int, reason: String?, first: Duration?, total: Duration)?
+        struct Completion {
+            var count: Int
+            var reason: String?
+            var first: Duration?
+            var total: Duration?
+        }
+        var completion: Completion?
         coordinator.onCompleted = { _, _, count, reason, first, total in
-            completion = (count, reason, first, total)
+            completion = Completion(count: count, reason: reason, first: first, total: total)
         }
         let events = AsyncThrowingStream<StreamEvent, Error> { continuation in
             continuation.yield(.started(model: "test"))
@@ -245,12 +255,16 @@ final class TransportTests: XCTestCase {
         continuation.yield(.started(model: "test"))
         continuation.yield(.delta("prefix"))
         try await Task.sleep(for: .milliseconds(40))
-        let activeWrites = trace.values.filter { $0.localizedCaseInsensitiveContains("INSERT") || $0.localizedCaseInsensitiveContains("UPDATE") }
+        let activeWrites = trace.values.filter {
+            $0.localizedCaseInsensitiveContains("INSERT") || $0.localizedCaseInsensitiveContains("UPDATE")
+        }
         XCTAssertTrue(activeWrites.isEmpty, "streaming must not persist assistant rows before terminal state")
         continuation.yield(.finished)
         continuation.finish()
         await task.value
-        let finalWrites = trace.values.filter { $0.localizedCaseInsensitiveContains("INSERT") || $0.localizedCaseInsensitiveContains("UPDATE") }
+        let finalWrites = trace.values.filter {
+            $0.localizedCaseInsensitiveContains("INSERT") || $0.localizedCaseInsensitiveContains("UPDATE")
+        }
         XCTAssertFalse(finalWrites.isEmpty, "terminal state must persist the assistant message")
     }
 
@@ -456,8 +470,16 @@ private final class URLProtocolStub: URLProtocol {
 private final class SQLTraceBox: @unchecked Sendable {
     private let lock = NSLock()
     private(set) var values: [String] = []
-    func append(_ value: String) { lock.lock(); values.append(value); lock.unlock() }
-    func removeAll() { lock.lock(); values.removeAll(); lock.unlock() }
+    func append(_ value: String) {
+        lock.lock()
+        values.append(value)
+        lock.unlock()
+    }
+    func removeAll() {
+        lock.lock()
+        values.removeAll()
+        lock.unlock()
+    }
 }
 
 extension Data {

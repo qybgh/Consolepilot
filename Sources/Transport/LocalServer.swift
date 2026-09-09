@@ -75,12 +75,13 @@ public actor LocalServer {
             tried.append(candidate)
             do {
                 let parameters = NWParameters.tcp
+                guard let port = NWEndpoint.Port(rawValue: candidate) else { continue }
                 parameters.requiredLocalEndpoint = NWEndpoint.hostPort(
                     host: NWEndpoint.Host("127.0.0.1"),
-                    port: NWEndpoint.Port(rawValue: candidate)!
+                    port: port
                 )
                 let listener = try NWListener(using: parameters)
-        listener.newConnectionHandler = { [weak self] connection in
+                listener.newConnectionHandler = { [weak self] connection in
                     connection.start(queue: .global())
                     Task { await self?.handle(connection, token: token) }
                 }
@@ -118,7 +119,8 @@ public actor LocalServer {
         private let lock = NSLock()
         private var claimed = false
         func claim() -> Bool {
-            lock.lock(); defer { lock.unlock() }
+            lock.lock()
+            defer { lock.unlock() }
             guard !claimed else { return false }
             claimed = true
             return true

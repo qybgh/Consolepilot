@@ -20,6 +20,8 @@ final class ChatTranscriptView: NSView {
     private final class MessageBubbleView: NSView {
         override var isFlipped: Bool { true }
 
+        // CopyButton 仅服务气泡内部复制交互，保持类内嵌套封装。
+        // swiftlint:disable:next nesting
         private final class CopyButton: NSButton {
             private var trackingArea: NSTrackingArea?
 
@@ -120,12 +122,13 @@ final class ChatTranscriptView: NSView {
         func showLoading() {
             guard rawContent.isEmpty else { return }
             isWaitingForFirstDelta = true
-            bodyView.textStorage?.setAttributedString(NSAttributedString(
-                string: "正在连接 Provider…",
-                attributes: [
-                    .font: NSFont.systemFont(ofSize: 13),
-                    .foregroundColor: theme.foreground.withAlphaComponent(0.55),
-                ]))
+            bodyView.textStorage?.setAttributedString(
+                NSAttributedString(
+                    string: "正在连接 Provider…",
+                    attributes: [
+                        .font: NSFont.systemFont(ofSize: 13),
+                        .foregroundColor: theme.foreground.withAlphaComponent(0.55),
+                    ]))
             cachedWidth = -1
         }
 
@@ -324,7 +327,7 @@ final class ChatTranscriptView: NSView {
         streamingFlushTask?.cancel()
         streamingFlushTask = nil
         pendingStreamingText.removeAll(keepingCapacity: true)
-        bubbles.forEach { $0.removeFromSuperview() }
+        for bubble in bubbles { bubble.removeFromSuperview() }
         bubbles.removeAll()
         activeBubble = nil
         currentSession = nil
@@ -361,7 +364,7 @@ final class ChatTranscriptView: NSView {
         DispatchQueue.main.async { [weak self] in self?.isReplacingHistory = false }
     }
 
-        func renderStreamingDraft(session: Session, draft: StreamDraft) {
+    func renderStreamingDraft(session: Session, draft: StreamDraft) {
         let bubble = MessageBubbleView(
             header: MessageHeader(
                 timestamp: draft.startedAt, role: .assistant, channel: session.channel,
@@ -407,14 +410,14 @@ final class ChatTranscriptView: NSView {
         let viewportWidth = max(1, scrollView.contentSize.width)
         let maxBubbleWidth = max(1, viewportWidth - inset * 2)
         let startIndex = min(max(0, requestedIndex), bubbles.count)
-        var y = startIndex == 0 ? inset : bubbles[startIndex - 1].frame.maxY + gap
+        var cursorY = startIndex == 0 ? inset : bubbles[startIndex - 1].frame.maxY + gap
         for bubble in bubbles.dropFirst(startIndex) {
             let size = bubble.sizeThatFits(maxWidth: maxBubbleWidth)
-            let x = bubble.role == .user ? viewportWidth - inset - size.width : inset
-            bubble.frame = NSRect(x: x, y: y, width: size.width, height: size.height)
-            y += size.height + gap
+            let originX = bubble.role == .user ? viewportWidth - inset - size.width : inset
+            bubble.frame = NSRect(x: originX, y: cursorY, width: size.width, height: size.height)
+            cursorY += size.height + gap
         }
-        let height = max(scrollView.contentSize.height, y + inset - gap)
+        let height = max(scrollView.contentSize.height, cursorY + inset - gap)
         documentView.frame = NSRect(x: 0, y: 0, width: viewportWidth, height: height)
     }
 

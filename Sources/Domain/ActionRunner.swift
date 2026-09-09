@@ -73,7 +73,8 @@ final class ActionRunner {
                 model: profile.model, sourceApp: frontmost.appName))
         sessionStore.appendMessage(Message(sessionId: session.id, role: .user, content: prompt))
         onSessionCreated?(session.id)
-        let provider = Self.isLoopback(profile.baseURL)
+        let provider =
+            Self.isLoopback(profile.baseURL)
             ? (localProvider ?? providerResolver(profile.provider))
             : providerResolver(profile.provider)
         guard let provider else {

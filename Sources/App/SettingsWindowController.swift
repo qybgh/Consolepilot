@@ -15,7 +15,9 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private let referenceMarker = "# --- Consolepilot 高级配置参考（可复制后取消注释） ---"
 
     init() {
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 900, height: 650), styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 900, height: 650), styleMask: [.titled, .closable, .resizable],
+            backing: .buffered, defer: false)
         window.minSize = NSSize(width: 420, height: 360)
         window.title = "Consolepilot 设置"
         window.isReleasedWhenClosed = false
@@ -191,7 +193,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         do {
             // Force a native UTF-8-backed String before validation. This avoids
             // TOMLDecoder 0.3's unsafe handling of bridged NSTextView strings.
-            let content = String(decoding: textView.string.utf8, as: UTF8.self)
+            guard let content = String(bytes: Array(textView.string.utf8), encoding: .utf8) else { return }
             try LocalServerClientConfiguration.validate(content)
             try content.write(to: url, atomically: true, encoding: .utf8)
             isDirty = false
@@ -224,19 +226,23 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
 
     private func glossaryText() -> NSAttributedString {
         let text = """
-        # Consolepilot 配置（中文说明）
-        # [general] 通用设置
-        # 端口、主题、不透明度、置顶、字体、字号、滚动缓冲、登录启动、呼出快捷键
-        # [server] 本地服务设置：鉴权引用和请求体上限
-        # [capture] 文本捕获设置：策略顺序、剪贴板等待、恢复和长度限制
-        # [[profiles]] Provider：id、provider、baseURL、model、apiKey、temperature、maxTokens、timeoutSec、priceInput、priceOutput
-        # [[actions]] Action：id、name、hotkey、profile、systemPrompt、userPrompt、input、attachTo、autoShow、notifyOnDone、overrides
-        # [[tails]] 日志尾随：path、enabled、format、fromEnd
-        # 密钥只能使用 ${keychain:name} 或 ${env:VAR}，禁止明文写入。
-        # 右侧是标准文本编辑器，可鼠标点击、拖选、复制粘贴、撤销并滚动。
-        """
+            # Consolepilot 配置（中文说明）
+            # [general] 通用设置
+            # 端口、主题、不透明度、置顶、字体、字号、滚动缓冲、登录启动、呼出快捷键
+            # [server] 本地服务设置：鉴权引用和请求体上限
+            # [capture] 文本捕获设置：策略顺序、剪贴板等待、恢复和长度限制
+            # [[profiles]] Provider：id、provider、baseURL、model、apiKey、temperature、maxTokens、timeoutSec、
+            # priceInput、priceOutput
+            # [[actions]] Action：id、name、hotkey、profile、systemPrompt、userPrompt、input、attachTo、autoShow、
+            # notifyOnDone、overrides
+            # [[tails]] 日志尾随：path、enabled、format、fromEnd
+            # 密钥只能使用 ${keychain:name} 或 ${env:VAR}，禁止明文写入。
+            # 右侧是标准文本编辑器，可鼠标点击、拖选、复制粘贴、撤销并滚动。
+            """
         let result = NSMutableAttributedString(string: text)
-        result.addAttributes([.font: NSFont.systemFont(ofSize: 12), .foregroundColor: NSColor(calibratedWhite: 0.68, alpha: 1)], range: NSRange(location: 0, length: result.length))
+        result.addAttributes(
+            [.font: NSFont.systemFont(ofSize: 12), .foregroundColor: NSColor(calibratedWhite: 0.68, alpha: 1)],
+            range: NSRange(location: 0, length: result.length))
         return result
     }
 

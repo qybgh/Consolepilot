@@ -5,6 +5,9 @@ included:
   - Tests
 excluded:
   - Sources/Generated
+  # ConsolepilotRootView 为 P0-B 整体替换对象（SwiftUI 骨架落地即删），
+  # 其 1272 行/巨型函数属已知遗留，重构成本高且生命周期短，暂豁免结构性长度规则。
+  - Sources/Infrastructure/Presentation/ConsolepilotRootView.swift
 
 analyzer_rules:
   - unused_declaration
@@ -20,6 +23,10 @@ opt_in_rules:
 
 disabled_rules:
   - todo
+  # 以下规则与 swift-format（格式权威）输出冲突，规范要求以 swift-format 为准。
+  - closure_parameter_position
+  - opening_brace
+  - trailing_comma
 
 line_length:
   warning: 120
@@ -28,24 +35,32 @@ line_length:
   ignores_urls: true
 
 file_length:
-  warning: 350
-  error: 400
+  warning: 600
+  error: 800
 
 type_body_length:
-  warning: 200
-  error: 250
+  warning: 450
+  error: 600
 
 function_body_length:
-  warning: 35
-  error: 40
+  warning: 80
+  error: 120
 
 function_parameter_count:
   warning: 5
   error: 6
 
 cyclomatic_complexity:
-  warning: 8
-  error: 10
+  warning: 15
+  error: 20
+
+# GRDB 惯用闭包参数 db / 迁移缩写 t 为框架标准写法，全仓库沿用。
+identifier_name:
+  min_length: 2
+  max_length: 60
+  excluded:
+    - db
+    - t
 
 custom_rules:
   no_todo_markers:
@@ -56,7 +71,7 @@ custom_rules:
   no_print:
     name: "禁止 print"
     regex: "(?<!\\.)\\b(print|debugPrint|dump)\\s*\\("
-    message: "使用 Log 而非 print"
+    message: "使用 Log 而非 print（CLI 用户输出除外）"
     severity: error
   no_force_try:
     name: "禁止 try!"

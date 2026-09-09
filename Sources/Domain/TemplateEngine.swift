@@ -11,7 +11,8 @@ struct TemplateContext: Sendable {
 
 struct TemplateEngine {
     static let knownPlaceholders: Set<String> = [
-        "input", "selection", "clipboard", "app", "bundleId", "appBundleId", "windowTitle", "date", "time", "datetime", "language", "lang",
+        "input", "selection", "clipboard", "app", "bundleId", "appBundleId", "windowTitle", "date", "time", "datetime",
+        "language", "lang",
     ]
 
     func render(_ template: String, context: TemplateContext) -> String {
@@ -34,7 +35,8 @@ struct TemplateEngine {
         return Self.placeholders(in: template).reduce(template) { result, key in
             if key.hasPrefix("env:") {
                 let name = String(key.dropFirst(4))
-                return result.replacingOccurrences(of: "{{\(key)}}", with: ProcessInfo.processInfo.environment[name] ?? "")
+                return result.replacingOccurrences(
+                    of: "{{\(key)}}", with: ProcessInfo.processInfo.environment[name] ?? "")
             }
             return result.replacingOccurrences(of: "{{\(key)}}", with: values[key] ?? "")
         }

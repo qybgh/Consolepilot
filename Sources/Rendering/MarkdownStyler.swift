@@ -22,7 +22,7 @@ struct MarkdownStyler {
     mutating func style(_ increment: String, theme: Theme) -> StyleOutput {
         let start = fullText.utf16.count
         fullText.append(increment)
-        var output = NSMutableAttributedString()
+        let output = NSMutableAttributedString()
         var retroactive: [(range: NSRange, attributes: [NSAttributedString.Key: Any])] = []
         var cursor = increment.startIndex
 

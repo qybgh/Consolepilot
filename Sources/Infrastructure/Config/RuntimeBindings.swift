@@ -35,19 +35,20 @@ final class RuntimeBindings {
 
     func apply(_ config: AppConfig) {
         var nextProviders: [ProviderKind: any AIProvider] = [:]
-        for profile in config.profiles {
-            if nextProviders[profile.provider] == nil {
-                nextProviders[profile.provider] = providerFactory(profile.provider)
-            }
+        for profile in config.profiles where nextProviders[profile.provider] == nil {
+            nextProviders[profile.provider] = providerFactory(profile.provider)
         }
 
         var nextHotkeys: [String: (HotkeySpec, @MainActor () -> Void)] = [:]
         for action in config.actions {
             guard let raw = action.hotkey, !raw.isEmpty, let spec = HotkeySpec(raw) else { continue }
             let actionID = action.id
-            nextHotkeys[actionID] = (spec, { [weak self] in
-                self?.onAction?(actionID)
-            })
+            nextHotkeys[actionID] = (
+                spec,
+                { [weak self] in
+                    self?.onAction?(actionID)
+                }
+            )
         }
 
         // Both registries are swapped only after the candidate configuration

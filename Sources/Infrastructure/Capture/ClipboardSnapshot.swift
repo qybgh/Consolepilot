@@ -3,10 +3,6 @@ import AppKit
 struct ClipboardSnapshot: Equatable {
     private let items: [[String: Data]]
 
-    private init(items: [[String: Data]]) {
-        self.items = items
-    }
-
     static func capture(from pasteboard: NSPasteboard) -> ClipboardSnapshot {
         let items = (pasteboard.pasteboardItems ?? []).map { item in
             [String: Data](
@@ -22,7 +18,7 @@ struct ClipboardSnapshot: Equatable {
         pasteboard.clearContents()
         let restoredItems = items.map { values -> NSPasteboardItem in
             let item = NSPasteboardItem()
-            values.forEach { type, data in
+            for (type, data) in values {
                 item.setData(data, forType: NSPasteboard.PasteboardType(type))
             }
             return item

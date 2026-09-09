@@ -1,0 +1,11 @@
+# Tests 专属配置：XCTest 断言依赖崩溃即失败，允许 force unwrap/cast/try。
+# 生产代码仍由根 .swiftlint.yml 强制以上规则。
+parent_config: ../.swiftlint.yml
+disabled_rules:
+  - force_unwrapping
+  - force_cast
+  - force_try
+  # 测试类按领域隔离为独立文件，天然超生产长度阈值；URLProtocol 子类必须 override class 方法。
+  - type_body_length
+  - file_length
+  - static_over_final_class

@@ -132,10 +132,11 @@ final class HotkeyRegistry {
             return
         }
         guard let targetPID = lastExternalProcessID ?? frontmostPID,
-              targetPID != ownPID else { return }
+            targetPID != ownPID
+        else { return }
         let source = CGEventSource(stateID: .combinedSessionState)
         guard let down = CGEvent(keyboardEventSource: source, virtualKey: 8, keyDown: true),
-              let up = CGEvent(keyboardEventSource: source, virtualKey: 8, keyDown: false)
+            let up = CGEvent(keyboardEventSource: source, virtualKey: 8, keyDown: false)
         else { return }
         down.flags = .maskCommand
         up.flags = .maskCommand
@@ -153,9 +154,11 @@ final class HotkeyRegistry {
             object: nil,
             queue: .main
         ) { [weak self] notification in
-            guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey]
+            guard
+                let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey]
                     as? NSRunningApplication,
-                  app.processIdentifier != ownPID else { return }
+                app.processIdentifier != ownPID
+            else { return }
             let pid = app.processIdentifier
             Task { @MainActor [weak self] in self?.lastExternalProcessID = pid }
         }

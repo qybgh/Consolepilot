@@ -16,3 +16,6 @@ config.toml
 # IntelliJ / AppCode project files
 .idea/
 *.iml
+
+# Xcode user state
+xcuserdata/

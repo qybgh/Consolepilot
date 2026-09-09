@@ -21,10 +21,11 @@ final class TerminalNSTextView: NSTextView {
         } else if event.modifierFlags.contains(.option), event.keyCode == 125 {
             onKeyCommand?(.historyNext)
         } else if event.modifierFlags.contains(.control),
-                  !event.modifierFlags.contains(.command),
-                  !event.modifierFlags.contains(.option),
-                  !event.modifierFlags.contains(.shift),
-                  event.keyCode == 8 {
+            !event.modifierFlags.contains(.command),
+            !event.modifierFlags.contains(.option),
+            !event.modifierFlags.contains(.shift),
+            event.keyCode == 8
+        {
             onKeyCommand?(.interrupt)
         } else {
             super.keyDown(with: event)

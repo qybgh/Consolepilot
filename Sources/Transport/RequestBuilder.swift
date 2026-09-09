@@ -24,7 +24,7 @@ struct RequestBuilder {
             url: request.profile.baseURL, path: "messages", apiKey: request.apiKey,
             contentType: "application/json")
         let model = request.overrides?.model ?? request.profile.model
-        var messages = request.messages.filter { $0.role != .system }.map {
+        let messages = request.messages.filter { $0.role != .system }.map {
             ["role": $0.role == .assistant ? "assistant" : "user", "content": $0.content]
         }
         let system = request.systemPrompt ?? request.messages.first(where: { $0.role == .system })?.content

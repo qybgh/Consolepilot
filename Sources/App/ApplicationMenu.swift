@@ -50,7 +50,8 @@ enum ApplicationMenu {
         guard let profileMenu else { return }
         profileMenu.removeAllItems()
         for profile in profiles {
-            let item = NSMenuItem(title: profile.name, action: #selector(AppDelegate.selectProfile(_:)), keyEquivalent: "")
+            let item = NSMenuItem(
+                title: profile.name, action: #selector(AppDelegate.selectProfile(_:)), keyEquivalent: "")
             item.representedObject = profile.id
             item.target = NSApp.delegate
             profileMenu.addItem(item)

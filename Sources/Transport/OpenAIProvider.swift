@@ -72,7 +72,8 @@ actor OpenAICompatibleProvider: AIProvider {
             continuation.yield(.delta(text))
         }
         if let choices = object["choices"] as? [[String: Any]],
-           let reason = choices.first?["finish_reason"] as? String, !reason.isEmpty {
+            let reason = choices.first?["finish_reason"] as? String, !reason.isEmpty
+        {
             continuation.yield(.finishReason(reason))
             Log.info("OpenAI finish_reason=\(reason)", category: .transport)
         }

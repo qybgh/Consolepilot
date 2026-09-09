@@ -11,7 +11,7 @@ struct AccessibilityCapture {
         guard status == .success, let focused = value else {
             throw CaptureError.allStrategiesFailed
         }
-        let focusedElement = unsafeBitCast(focused, to: AXUIElement.self)
+        let focusedElement = unsafeDowncast(focused, to: AXUIElement.self)
         var selected: CFTypeRef?
         let selectedStatus = AXUIElementCopyAttributeValue(
             focusedElement, kAXSelectedTextAttribute as CFString, &selected)
@@ -28,7 +28,7 @@ struct AccessibilityCapture {
         guard AXUIElementCopyAttributeValue(element, kAXFocusedWindowAttribute as CFString, &focused) == .success,
             let window = focused
         else { return nil }
-        let windowElement = unsafeBitCast(window, to: AXUIElement.self)
+        let windowElement = unsafeDowncast(window, to: AXUIElement.self)
         var title: CFTypeRef?
         guard AXUIElementCopyAttributeValue(windowElement, kAXTitleAttribute as CFString, &title) == .success else {
             return nil

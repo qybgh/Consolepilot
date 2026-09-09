@@ -1,5 +1,40 @@
 # Consolepilot 开发进度
 
+## P0/P1 阶段（XcodeGen 迁移 + 8-target 拆分 + Action 可靠性）
+
+执行计划：`Docs/PLAN.md`（P0+P1 可直接执行版）；决策登记：`Docs/GATE0-CONFIRMATION.md`（D1–D8）；写法基准：`Docs/CODING-STYLE.md`。
+
+### 状态
+
+| 阶段 | 状态 | 证据 |
+|---|---|---|
+| Preflight（工具/基线/文档） | 进行中 | 见下方基线记录 |
+| P0-A 工程化（XcodeGen+Makefile+同构迁移） | 未开始 | — |
+| P0-B 入口替换与最小 SwiftUI 骨架 | 未开始 | — |
+| P0-C 协议/用例空壳与清理 | 未开始 | — |
+| P1-A 8-target 拆分 | 未开始 | — |
+| P1-B 领域与存储 | 未开始 | — |
+| P1-C 流与并发重建 | 未开始 | — |
+| P1-D Provider 统一 contract + fixture | 未开始 | — |
+| P1-E Action 生命周期与配置处置 | 未开始 | — |
+| P1-F 死代码清理与收尾 | 未开始 | — |
+
+### Preflight 基线记录（2026-09-09）
+
+- 环境：macOS 15.7.9 arm64；Xcode 16.4 (16F6)；Swift 6.1.2；macOS SDK 15.5；部署目标 14.0。
+- 工具：xcodegen 2.46.0（`brew install xcodegen` 安装）、swiftlint 0.65.1、periphery 3.8.0、swift-format（Xcode 工具链内，`xcrun --find swift-format`）均可用。
+- 迁移基线：SwiftPM 结构 61 个 Swift 文件；`swift test --disable-sandbox` = **77 项：74 通过，3 项失败（受限 shell 已知项）**。
+- lint 基线（P0-A 前置 chore 清理后）：swift-format 与 SwiftLint 全仓 **0 违规**；SwiftLint 规则与格式权威 swift-format 对齐（closure_parameter_position/opening_brace/trailing_comma 禁用），Tests 嵌套配置豁免 force 类与长度类规则（XCTest 惯用）。
+- 已知失败 3 项（无 GUI/受限 shell 环境，GUI 会话须全绿）：
+  1. `InfrastructureTests.testClipboardSnapshotRestoresStringRTFImageAndMultipleItems` — `XCTUnwrap failed: NSPasteboard`（受限 shell 无剪贴板服务）。
+  2. `InfrastructureTests.testClipboardSnapshotRoundTripsOneHundredTimes` — 同上。
+  3. `InfrastructureTests.testKeychainStoreRoundTripsAndDeletesOnlyTestAccount` — `KeychainError(status: 100001)`（受限 shell 无钥匙串访问）。
+- 契约基线：`TransportTests` 20 项全绿，作为 Gate 0.4 Provider contract 证据（独立 fixture 脚本并入 P1-D 建立）。
+- 测试明细（77 项分布）：TransportTests 20、ServerTests（含 HTTP/鉴权/CLI 语义）、DatabaseTests、InfrastructureTests（含上述 3 项受限失败）、HotkeyTests、RenderingTests。
+- 工作区在此基线后进入 P0-A；后续阶段状态与证据随实施逐段更新。
+
+---
+
 更新日期：2026-08-29
 
 本文件是 `Consolepilot_plan_v4.0.md` 的执行看板。状态只按里程碑 DoD 判断：文件存在不等于完成，缺少测试、实机证据或门禁时统一标为“部分完成”。

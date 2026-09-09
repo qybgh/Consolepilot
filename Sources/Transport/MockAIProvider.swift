@@ -36,11 +36,16 @@ struct MockAIProvider: AIProvider {
         }
     }
 
+    private static func longParagraph(index: Int) -> String {
+        let head =
+            "第\(index)段：这是 Consolepilot 本地 Mock 的长流式测试内容，用来验证连续 delta、长文本排版、滚动跟随、中断恢复和数据库检查点。"
+        let tail = "每个段落会拆成多个小块逐步发送，确保界面不会等待完整响应后才显示。中文、English、emoji 🚀 都会被保留。\n"
+        return head + tail
+    }
+
     private static func response(for prompt: String) -> String {
         if prompt == "/long" || prompt.contains("3000") || prompt.contains("10 段") || prompt.contains("10段") {
-            let paragraphs = (1...24).map { index in
-                "第\(index)段：这是 Consolepilot 本地 Mock 的长流式测试内容，用来验证连续 delta、长文本排版、滚动跟随、中断恢复和数据库检查点。每个段落会拆成多个小块逐步发送，确保界面不会等待完整响应后才显示。中文、English、emoji 🚀 都会被保留。\n"
-            }
+            let paragraphs = (1...24).map { Self.longParagraph(index: $0) }
             return paragraphs.joined()
         }
         if prompt == "/code" {

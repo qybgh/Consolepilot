@@ -9,7 +9,8 @@ struct SimulatedCopyCapture {
         let snapshot = ClipboardSnapshot.capture(from: pasteboard)
         let originalChangeCount = pasteboard.changeCount
         let targetPID = targetPID ?? NSWorkspace.shared.frontmostApplication?.processIdentifier
-        Log.debug("模拟复制开始：pid=\(targetPID.map(String.init) ?? "none") changeCount=\(originalChangeCount)", category: .capture)
+        Log.debug(
+            "模拟复制开始：pid=\(targetPID.map(String.init) ?? "none") changeCount=\(originalChangeCount)", category: .capture)
         defer {
             if restore { snapshot.restore(to: pasteboard) }
         }

@@ -7,6 +7,9 @@ struct ConfigValidator: Sendable {
         self.hasAccessibility = hasAccessibility
     }
 
+    // 规则引擎聚合入口：覆盖重复 ID/快捷键/模板/范围/引用/服务等全部规则。
+    // P1-E 随 schema 变更重构为按规则分文件时消除本条豁免。
+    // swiftlint:disable:next cyclomatic_complexity function_body_length
     func validate(_ config: AppConfig, sourceText: String) -> ValidationReport {
         var errors: [ConfigIssue] = []
         var warnings: [ConfigIssue] = []
@@ -94,7 +97,8 @@ struct ConfigValidator: Sendable {
             if let overrides = action.overrides,
                 (overrides.temperature.map { $0 < 0 || $0 > 2 } ?? false)
                     || (overrides.maxTokens.map { $0 <= 0 } ?? false)
-                    || (overrides.model != nil && overrides.model?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == true)
+                    || (overrides.model != nil
+                        && overrides.model?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == true)
             {
                 errors.append(
                     ConfigIssue(
@@ -196,7 +200,8 @@ struct ConfigValidator: Sendable {
     }
 
     private static func isValidHotkey(_ value: String) -> Bool {
-        value.range(of: #"^(cmd|ctrl|alt|shift)(\+(cmd|ctrl|alt|shift))*\+[A-Za-z0-9`]+(\*2)?$"#, options: .regularExpression)
+        value.range(
+            of: #"^(cmd|ctrl|alt|shift)(\+(cmd|ctrl|alt|shift))*\+[A-Za-z0-9`]+(\*2)?$"#, options: .regularExpression)
             != nil
     }
 }
