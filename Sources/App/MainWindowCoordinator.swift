@@ -9,18 +9,18 @@ import ConsolepilotCore
 /// 从而既保持原生窗口生命周期，又不丢失会话与后台 Action 状态。
 @MainActor
 final class MainWindowCoordinator {
-    private var _rootView: ConsolepilotRootView?
+    private var rootViewStorage: ConsolepilotRootView?
 
     /// 引擎根视图：首次访问时创建，之后跨窗口关闭/重建存活。
     var rootView: ConsolepilotRootView {
-        if let _rootView { return _rootView }
+        if let rootViewStorage { return rootViewStorage }
         let view = ConsolepilotRootView(frame: .zero)
-        _rootView = view
+        rootViewStorage = view
         return view
     }
 
     /// 引擎根视图是否已创建（避免「仅刷新菜单」等轻量路径误触发完整引擎）。
-    var isRootViewCreated: Bool { _rootView != nil }
+    var isRootViewCreated: Bool { rootViewStorage != nil }
 
     /// 由 SwiftUI 注入的「打开主窗口」动作（`openWindow(id: "main")`）；
     /// 主窗口被关闭后，经菜单/状态栏唤回时使用。
