@@ -1,7 +1,7 @@
 import ConsolepilotDomain
 import Foundation
 
-enum StreamEvent: Sendable, Equatable {
+package enum StreamEvent: Sendable, Equatable {
     case started(model: String)
     case delta(String)
     case usage(input: Int, output: Int)
@@ -10,8 +10,14 @@ enum StreamEvent: Sendable, Equatable {
     case failed(TransportError)
 }
 
-struct TokenBatch: Sendable, Equatable {
-    let sessionId: String
-    let text: String
-    let deltaCount: Int
+package struct TokenBatch: Sendable, Equatable {
+    package let sessionId: String
+    package let text: String
+    package let deltaCount: Int
+
+    package init(sessionId: String, text: String, deltaCount: Int) {
+        self.sessionId = sessionId
+        self.text = text
+        self.deltaCount = deltaCount
+    }
 }

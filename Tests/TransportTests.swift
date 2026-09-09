@@ -2,7 +2,7 @@ import AppKit
 import ConsolepilotDomain
 import XCTest
 
-@testable import ConsolepilotCore
+@testable import ConsolepilotInfrastructure
 
 final class TransportTests: XCTestCase {
     func testTransportHTTPStatusMappingIsSharedAcrossProviders() throws {

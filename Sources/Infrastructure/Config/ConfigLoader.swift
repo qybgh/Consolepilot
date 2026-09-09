@@ -6,10 +6,10 @@ import TOMLDecoder
 
 extension ConfigLoader {
     /// 返回随 App/CLI/测试 bundle 分发的 `DefaultConfig.toml`。
-    /// 优先 Bundle.main，其次按 bundle identifier 探测 ConsolepilotCore 资源，
+    /// 优先 Bundle.main，其次按 bundle identifier 探测 ConsolepilotInfrastructure 资源，
     /// 最后扫描已加载 bundle 作为兜底（适配 Xcode 下 host/test 不同装载形态）。
     static func bundledDefaultConfigURL() -> URL? {
-        let candidates: [Bundle?] = [.main, Bundle(identifier: "com.consolepilot.ConsolepilotCore")]
+        let candidates: [Bundle?] = [.main, Bundle(identifier: "com.consolepilot.ConsolepilotInfrastructure")]
         for bundle in candidates {
             if let url = bundle?.url(forResource: "DefaultConfig", withExtension: "toml") {
                 return url
@@ -22,11 +22,11 @@ extension ConfigLoader {
     }
 }
 
-struct ConfigLoader {
+package struct ConfigLoader {
     let fileManager: FileManager
     private let explicitURL: URL?
 
-    init(fileManager: FileManager = .default, configURL: URL? = nil) {
+    package init(fileManager: FileManager = .default, configURL: URL? = nil) {
         self.fileManager = fileManager
         self.explicitURL = configURL
     }

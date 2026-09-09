@@ -3,7 +3,7 @@ import ConsolepilotDomain
 import Foundation
 
 @MainActor
-final class ActionRunner {
+package final class ActionRunner {
     private let config: ConfigStore
     private let capture: TextCaptureService
     private let secrets: SecretResolver
@@ -13,7 +13,7 @@ final class ActionRunner {
     private let captureLogStore: CaptureLogStore?
     private let localProvider: (any AIProvider)?
     private let templateEngine = TemplateEngine()
-    var onSessionCreated: (@MainActor (String) -> Void)?
+    package var onSessionCreated: (@MainActor (String) -> Void)?
 
     init(
         config: ConfigStore, capture: TextCaptureService, secrets: SecretResolver,
@@ -31,7 +31,7 @@ final class ActionRunner {
         self.localProvider = localProvider
     }
 
-    init(
+    package init(
         config: ConfigStore, capture: TextCaptureService, secrets: SecretResolver,
         providerResolver: @escaping (ProviderKind) -> (any AIProvider)?, coordinator: StreamCoordinator,
         sessionStore: SessionStore, captureLogStore: CaptureLogStore? = nil,
@@ -47,7 +47,7 @@ final class ActionRunner {
         self.localProvider = localProvider
     }
 
-    func run(actionId: String, overrideInput: String? = nil, sourcePID: pid_t? = nil) async throws {
+    package func run(actionId: String, overrideInput: String? = nil, sourcePID: pid_t? = nil) async throws {
         guard let action = config.current.action(id: actionId) else {
             throw ConfigError.invalid("未知 action：\(actionId)")
         }

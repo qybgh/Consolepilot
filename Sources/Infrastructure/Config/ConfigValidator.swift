@@ -1,10 +1,10 @@
 import ConsolepilotDomain
 import Foundation
 
-struct ConfigValidator: Sendable {
+package struct ConfigValidator: Sendable {
     let hasAccessibility: Bool
 
-    init(hasAccessibility: Bool = true) {
+    package init(hasAccessibility: Bool = true) {
         self.hasAccessibility = hasAccessibility
     }
 

@@ -1,17 +1,24 @@
 import ConsolepilotDomain
 import Foundation
 
-struct StreamDraft: Sendable, Equatable {
-    let sessionId: String
-    let messageId: String
-    let startedAt: Date
-    let text: String
+package struct StreamDraft: Sendable, Equatable {
+    package let sessionId: String
+    package let messageId: String
+    package let startedAt: Date
+    package let text: String
+
+    package init(sessionId: String, messageId: String, startedAt: Date, text: String) {
+        self.sessionId = sessionId
+        self.messageId = messageId
+        self.startedAt = startedAt
+        self.text = text
+    }
 }
 
 /// 唯一的流汇聚点。每个会话拥有独立上下文；流进行中定期写入检查点，
 /// 因此中断、切换会话或应用退出都不会丢失已经收到的内容。
 @MainActor
-final class StreamCoordinator {
+package final class StreamCoordinator {
     private final class Context {
         let startedAt = Date()
         let clockStartedAt = ContinuousClock.now
@@ -34,24 +41,24 @@ final class StreamCoordinator {
     private let usageStore: UsageStore
     private var contexts: [String: Context] = [:]
 
-    var onDelta: ((String, TokenBatch) -> Void)?
-    var onFinish: ((String, MessageState) -> Void)?
-    var onStarted: ((String, String) -> Void)?
-    var onFirstDelta: ((String, Duration) -> Void)?
-    var onFinishReason: ((String, String) -> Void)?
-    var onCompleted: ((String, MessageState, Int, String?, Duration?, Duration) -> Void)?
+    package var onDelta: ((String, TokenBatch) -> Void)?
+    package var onFinish: ((String, MessageState) -> Void)?
+    package var onStarted: ((String, String) -> Void)?
+    package var onFirstDelta: ((String, Duration) -> Void)?
+    package var onFinishReason: ((String, String) -> Void)?
+    package var onCompleted: ((String, MessageState, Int, String?, Duration?, Duration) -> Void)?
 
-    init(sessionStore: SessionStore, usageStore: UsageStore) {
+    package init(sessionStore: SessionStore, usageStore: UsageStore) {
         self.sessionStore = sessionStore
         self.usageStore = usageStore
     }
 
     var isStreaming: Bool { !contexts.isEmpty }
 
-    func isStreaming(sessionId: String) -> Bool { contexts[sessionId] != nil }
+    package func isStreaming(sessionId: String) -> Bool { contexts[sessionId] != nil }
 
     /// Persist active drafts before termination while the store is still alive.
-    func persistActiveDrafts() {
+    package func persistActiveDrafts() {
         for (sessionId, context) in contexts {
             flush(context, sessionId: sessionId)
             persistCheckpoint(context, sessionId: sessionId, state: .interrupted, force: true)
@@ -61,13 +68,13 @@ final class StreamCoordinator {
     /// Synchronously checkpoint a session before its provider task is cancelled.
     /// This closes the small race where cancellation occurs before the next
     /// streaming flush (especially visible during the first few tokens).
-    func interrupt(sessionId: String) {
+    package func interrupt(sessionId: String) {
         guard let context = contexts[sessionId], !context.didFinish else { return }
         flush(context, sessionId: sessionId)
         persistCheckpoint(context, sessionId: sessionId, state: .interrupted, force: true)
     }
 
-    func draft(sessionId: String) -> StreamDraft? {
+    package func draft(sessionId: String) -> StreamDraft? {
         guard let context = contexts[sessionId] else { return nil }
         let draft = StreamDraft(
             sessionId: sessionId, messageId: context.assistantMessageId, startedAt: context.startedAt,
@@ -82,7 +89,7 @@ final class StreamCoordinator {
         return draft
     }
 
-    func consume(_ events: AsyncThrowingStream<StreamEvent, Error>, into sessionId: String) async {
+    package func consume(_ events: AsyncThrowingStream<StreamEvent, Error>, into sessionId: String) async {
         guard contexts[sessionId] == nil else { return }
         let context = Context()
         contexts[sessionId] = context

@@ -1,4 +1,5 @@
 import AppKit
+import ConsolepilotLegacyUI
 
 @MainActor
 final class UsageWindowController: NSWindowController {

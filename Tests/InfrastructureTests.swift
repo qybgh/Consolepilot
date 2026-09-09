@@ -3,7 +3,7 @@ import ConsolepilotDomain
 import GRDB
 import XCTest
 
-@testable import ConsolepilotCore
+@testable import ConsolepilotInfrastructure
 
 final class InfrastructureTests: XCTestCase {
     private func validConfig() -> AppConfig {

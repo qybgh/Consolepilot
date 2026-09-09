@@ -2,7 +2,7 @@ import ConsolepilotDomain
 import Foundation
 
 @MainActor
-final class CaptureLogStore {
+package final class CaptureLogStore {
     private let database: AppDatabase
 
     init(database: AppDatabase) { self.database = database }

@@ -5,9 +5,9 @@ included:
   - Tests
 excluded:
   - Sources/Generated
-  # ConsolepilotRootView 为 P0-B 整体替换对象（SwiftUI 骨架落地即删），
-  # 其 1272 行/巨型函数属已知遗留，重构成本高且生命周期短，暂豁免结构性长度规则。
-  - Sources/Infrastructure/Presentation/ConsolepilotRootView.swift
+  # ConsolepilotRootView 为 P2 SwiftUI 迁移的整体删除对象（P0-B 起转存 LegacyUI 过渡模块），
+  # 其 1120 行/巨型函数属已知遗留，重构成本高且生命周期短，暂豁免结构性长度规则。
+  - Sources/LegacyUI/Presentation/ConsolepilotRootView.swift
 
 analyzer_rules:
   - unused_declaration

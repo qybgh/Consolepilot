@@ -2,7 +2,8 @@ import AppKit
 import ConsolepilotDomain
 
 @MainActor
-final class FrontmostAppObserver {
+package final class FrontmostAppObserver {
+    package init() {}
     func processIdentifier() -> pid_t? {
         NSWorkspace.shared.frontmostApplication?.processIdentifier
     }

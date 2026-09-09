@@ -9,7 +9,7 @@ public actor FileTailWatcher {
     private var pending = ""
     private var fileIdentity: AnyHashable?
 
-    init(config: TailConfig, onLine: @escaping @Sendable (String) -> Void) {
+    package init(config: TailConfig, onLine: @escaping @Sendable (String) -> Void) {
         self.config = config
         self.onLine = onLine
     }

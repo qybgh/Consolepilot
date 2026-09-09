@@ -1,14 +1,14 @@
 import Foundation
 
 /// A deterministic local streaming provider used for end-to-end acceptance without API credentials.
-struct MockAIProvider: AIProvider {
+package struct MockAIProvider: AIProvider {
     let delay: Duration
 
-    init(delay: Duration = .milliseconds(28)) {
+    package init(delay: Duration = .milliseconds(28)) {
         self.delay = delay
     }
 
-    func stream(_ request: ChatRequest) -> AsyncThrowingStream<StreamEvent, Error> {
+    package func stream(_ request: ChatRequest) -> AsyncThrowingStream<StreamEvent, Error> {
         let response = Self.response(for: request.messages.last?.content ?? "")
         let inputCount = request.messages.last?.content.count ?? 0
         let delay = delay

@@ -3,10 +3,10 @@ import Darwin
 import Foundation
 
 @MainActor
-final class ConfigStore {
+package final class ConfigStore {
     private let loader: ConfigLoader
     private let validator: ConfigValidator
-    private(set) var current: AppConfig
+    package private(set) var current: AppConfig
     private(set) var lastReport = ValidationReport(errors: [], warnings: [])
     private var watcher: DispatchSourceFileSystemObject?
     private var watchedURL: URL?
@@ -16,13 +16,13 @@ final class ConfigStore {
     /// Called after a valid configuration becomes current. The callback is
     /// delivered on the main actor and can be used by UI/hotkey consumers to
     /// rebind their runtime state without rebuilding the store.
-    var onChange: ((AppConfig) -> Void)?
+    package var onChange: ((AppConfig) -> Void)?
 
     func addObserver(_ observer: @escaping @MainActor (AppConfig) -> Void) {
         observers.append(observer)
     }
 
-    init(loader: ConfigLoader = ConfigLoader(), validator: ConfigValidator = ConfigValidator()) throws {
+    package init(loader: ConfigLoader = ConfigLoader(), validator: ConfigValidator = ConfigValidator()) throws {
         self.loader = loader
         self.validator = validator
         let url = try loader.resolveConfigURL()
@@ -57,7 +57,7 @@ final class ConfigStore {
         }
     }
 
-    func startWatching() throws {
+    package func startWatching() throws {
         stopWatching()
         let url = try loader.resolveConfigURL()
         let descriptor = open(url.path, O_EVTONLY)

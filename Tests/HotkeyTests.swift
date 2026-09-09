@@ -1,7 +1,7 @@
 import ConsolepilotDomain
 import XCTest
 
-@testable import ConsolepilotCore
+@testable import ConsolepilotInfrastructure
 
 @MainActor
 final class HotkeyTests: XCTestCase {

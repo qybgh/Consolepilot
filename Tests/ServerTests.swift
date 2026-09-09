@@ -2,7 +2,7 @@ import ConsolepilotDomain
 import Foundation
 import XCTest
 
-@testable import ConsolepilotCore
+@testable import ConsolepilotInfrastructure
 
 final class ServerTests: XCTestCase {
     func testLocalServerServesAuthenticatedLoopbackRequest() async throws {

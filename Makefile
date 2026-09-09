@@ -49,6 +49,8 @@ lint: drift-check ## 格式/静态/分析/密钥扫描/死代码门禁
 	swiftlint lint --strict; \
 	echo "--- xcodebuild analyze ---"; \
 	xcodebuild $(XCODEBUILD_FLAGS) analyze CODE_SIGNING_ALLOWED=NO; \
+	echo "--- 模块 import 方向检查 ---"; \
+	python3 Scripts/check-imports.py; \
 	echo "--- 敏感信息扫描 ---"; \
 	! grep -rInE "(Authorization|Bearer|api[_-]?key|secret)\s*[:=]\s*[\"'][^\"']{8,}" Sources Tests --include="*.swift" --include="*.toml" || { echo "发现疑似硬编码密钥" >&2; exit 1; }; \
 	echo "--- periphery 未使用代码扫描 ---"; \

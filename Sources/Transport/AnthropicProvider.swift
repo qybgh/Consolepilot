@@ -1,13 +1,13 @@
 import ConsolepilotDomain
 import Foundation
 
-actor AnthropicProvider: AIProvider {
+package actor AnthropicProvider: AIProvider {
     private let session: URLSession
     private let builder = RequestBuilder()
 
-    init(session: URLSession = .shared) { self.session = session }
+    package init(session: URLSession = .shared) { self.session = session }
 
-    nonisolated func stream(_ request: ChatRequest) -> AsyncThrowingStream<StreamEvent, Error> {
+    nonisolated package func stream(_ request: ChatRequest) -> AsyncThrowingStream<StreamEvent, Error> {
         AsyncThrowingStream { continuation in
             let task = Task { [weak self] in
                 guard let self else { return }

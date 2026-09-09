@@ -2,7 +2,7 @@ import ConsolepilotDomain
 import GRDB
 import XCTest
 
-@testable import ConsolepilotCore
+@testable import ConsolepilotInfrastructure
 
 final class DatabaseTests: XCTestCase {
     private func makeDatabase() throws -> AppDatabase {

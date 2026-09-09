@@ -2,7 +2,7 @@ import AppKit
 import ConsolepilotDomain
 
 @MainActor
-final class TextCaptureService {
+package final class TextCaptureService {
     private let config: CaptureConfig
     private let frontmost: FrontmostAppObserver
     private let accessibilityCapture: @MainActor () throws -> String
@@ -10,7 +10,7 @@ final class TextCaptureService {
     private let simulatedCopyCapture: @MainActor (pid_t?) async throws -> String
     private let secureInputActive: @MainActor () -> Bool
 
-    init(config: CaptureConfig, frontmost: FrontmostAppObserver = FrontmostAppObserver()) {
+    package init(config: CaptureConfig, frontmost: FrontmostAppObserver = FrontmostAppObserver()) {
         self.config = config
         self.frontmost = frontmost
         accessibilityCapture = { try AccessibilityCapture().selectedText() }

@@ -1,5 +1,6 @@
 import AppKit
-import ConsolepilotCore
+import ConsolepilotInfrastructure
+import ConsolepilotLegacyUI
 
 /// 主窗口协调器：持有跨窗口存活的引擎根视图（会话/配置/流/本地服务），
 /// 并承担「显示主窗口 / 打开设置 / 快速提问 / 用量快照 / 退出前持久化」。

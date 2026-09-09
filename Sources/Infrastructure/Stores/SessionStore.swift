@@ -4,15 +4,15 @@ import GRDB
 import Observation
 
 @MainActor @Observable
-final class SessionStore {
+package final class SessionStore {
     private static let messagePageSize = 12
     private let database: AppDatabase
-    private(set) var sessions: [Session]
-    private(set) var currentId: String?
-    private(set) var messages: [Message]
-    private(set) var hasEarlierMessages: Bool
+    package private(set) var sessions: [Session]
+    package private(set) var currentId: String?
+    package private(set) var messages: [Message]
+    package private(set) var hasEarlierMessages: Bool
 
-    init(database: AppDatabase) throws {
+    package init(database: AppDatabase) throws {
         self.database = database
         let loadedSessions = try database.writer.read { db in
             try SessionRecord
@@ -31,7 +31,7 @@ final class SessionStore {
         self.hasEarlierMessages = loadedPage.count > Self.messagePageSize
     }
 
-    func create(channel: SessionChannel, title: String, meta: SessionMeta) -> Session {
+    package func create(channel: SessionChannel, title: String, meta: SessionMeta) -> Session {
         let session = Session(channel: channel, title: title, meta: meta)
         do {
             var record = SessionRecord(session)
@@ -46,7 +46,7 @@ final class SessionStore {
         return session
     }
 
-    func select(_ id: String) {
+    package func select(_ id: String) {
         guard sessions.contains(where: { $0.id == id }) else { return }
         currentId = id
         do {
@@ -61,7 +61,7 @@ final class SessionStore {
     }
 
     @discardableResult
-    func loadEarlierMessages() -> [Message] {
+    package func loadEarlierMessages() -> [Message] {
         guard let currentId, hasEarlierMessages else { return [] }
         do {
             let page = try Self.fetchMessagePage(
@@ -76,7 +76,7 @@ final class SessionStore {
         }
     }
 
-    func rename(_ id: String, to title: String) {
+    package func rename(_ id: String, to title: String) {
         guard let index = sessions.firstIndex(where: { $0.id == id }) else { return }
         var session = sessions[index]
         session.title = title
@@ -88,7 +88,7 @@ final class SessionStore {
         } catch { Log.error("重命名会话失败：\(error)", category: .domain) }
     }
 
-    func delete(_ id: String) {
+    package func delete(_ id: String) {
         do {
             _ = try database.writer.write { db in try SessionRecord.deleteOne(db, key: id) }
             sessions.removeAll { $0.id == id }
@@ -107,7 +107,7 @@ final class SessionStore {
         } catch { Log.error("删除会话失败：\(error)", category: .domain) }
     }
 
-    func deleteAll() {
+    package func deleteAll() {
         do {
             _ = try database.writer.write { db in try SessionRecord.deleteAll(db) }
             sessions.removeAll()
@@ -117,7 +117,7 @@ final class SessionStore {
         } catch { Log.error("清空会话失败：\(error)", category: .domain) }
     }
 
-    func appendMessage(_ message: Message) {
+    package func appendMessage(_ message: Message) {
         do {
             var record = MessageRecord(message)
             try database.writer.write { db in try record.insert(db) }
@@ -180,7 +180,7 @@ final class SessionStore {
         }
     }
 
-    func session(id: String) -> Session? {
+    package func session(id: String) -> Session? {
         sessions.first { $0.id == id }
     }
 

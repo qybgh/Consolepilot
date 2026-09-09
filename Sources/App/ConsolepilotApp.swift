@@ -1,3 +1,4 @@
+import ConsolepilotLegacyUI
 import SwiftUI
 
 /// Consolepilot 的 SwiftUI 入口（P0-B 起替代 AppKit `ConsolepilotMain`）。

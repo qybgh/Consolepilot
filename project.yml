@@ -10,6 +10,7 @@ settings:
     SWIFT_VERSION: "6.0"
     MACOSX_DEPLOYMENT_TARGET: "14.0"
     SWIFT_STRICT_CONCURRENCY: complete
+    OTHER_SWIFT_FLAGS: -package-name Consolepilot
 configs:
   Debug: debug
   Release: release
@@ -61,17 +62,14 @@ targets:
         DYLIB_INSTALL_NAME_BASE: "@rpath"
         MACH_O_TYPE: staticlib
         SWIFT_EMIT_LOC_STRINGS: NO
-  ConsolepilotCore:
+  ConsolepilotInfrastructure:
     type: framework
     platform: macOS
-    productName: ConsolepilotCore
+    productName: ConsolepilotInfrastructure
     deploymentTarget: "14.0"
     sources:
-      - path: Sources/Domain/Stores
-      - path: Sources/Domain/ActionRunner.swift
-      - path: Sources/Domain/StreamCoordinator.swift
+      - path: Sources/Infrastructure/Stores
       - path: Sources/Infrastructure
-      - path: Sources/Rendering
       - path: Sources/Transport
       - path: Sources/Infrastructure/Config/DefaultConfig.toml
         buildPhase: resources
@@ -81,7 +79,27 @@ targets:
       - package: TOMLDecoder
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.consolepilot.ConsolepilotCore
+        PRODUCT_BUNDLE_IDENTIFIER: com.consolepilot.ConsolepilotInfrastructure
+        SKIP_INSTALL: YES
+        DYLIB_INSTALL_NAME_BASE: "@rpath"
+        MACH_O_TYPE: staticlib
+        SWIFT_EMIT_LOC_STRINGS: NO
+  ConsolepilotLegacyUI:
+    type: framework
+    platform: macOS
+    productName: ConsolepilotLegacyUI
+    deploymentTarget: "14.0"
+    sources:
+      - path: Sources/LegacyUI/Presentation
+      - path: Sources/LegacyUI/Rendering
+    dependencies:
+      - target: ConsolepilotInfrastructure
+      - target: ConsolepilotDomain
+      - package: GRDB
+      - package: TOMLDecoder
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.consolepilot.ConsolepilotLegacyUI
         SKIP_INSTALL: YES
         DYLIB_INSTALL_NAME_BASE: "@rpath"
         MACH_O_TYPE: staticlib
@@ -96,8 +114,9 @@ targets:
       - path: Sources/Infrastructure/Config/DefaultConfig.toml
         buildPhase: resources
     dependencies:
-      - target: ConsolepilotCore
+      - target: ConsolepilotInfrastructure
       - target: ConsolepilotDomain
+      - target: ConsolepilotLegacyUI
       - package: GRDB
       - package: TOMLDecoder
     info:
@@ -123,7 +142,7 @@ targets:
       - path: Sources/Infrastructure/Config/DefaultConfig.toml
         buildPhase: resources
     dependencies:
-      - target: ConsolepilotCore
+      - target: ConsolepilotInfrastructure
       - target: ConsolepilotDomain
       - package: GRDB
       - package: TOMLDecoder
@@ -143,9 +162,10 @@ targets:
         buildPhase: resources
     dependencies:
       - target: Consolepilot
-      - target: ConsolepilotCore
+      - target: ConsolepilotInfrastructure
       - target: ConsolepilotDomain
       - target: ConsolepilotApplication
+      - target: ConsolepilotLegacyUI
       - package: GRDB
       - package: TOMLDecoder
     settings:

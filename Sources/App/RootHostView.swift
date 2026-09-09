@@ -1,5 +1,6 @@
 import AppKit
-import ConsolepilotCore
+import ConsolepilotInfrastructure
+import ConsolepilotLegacyUI
 import SwiftUI
 
 /// SwiftUI 主窗口内容：把协调器持有的引擎根视图挂载到当前窗口。

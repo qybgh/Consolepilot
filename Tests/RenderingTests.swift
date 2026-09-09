@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import ConsolepilotCore
+@testable import ConsolepilotLegacyUI
 
 final class RenderingTests: XCTestCase {
     func testChatBubbleWidthPolicyShrinksOnlyTrueSingleLineMessages() {

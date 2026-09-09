@@ -1,5 +1,6 @@
 import AppKit
-import ConsolepilotCore
+import ConsolepilotInfrastructure
+import ConsolepilotLegacyUI
 
 /// 应用生命周期桥接：持有主窗口协调器、菜单栏与用量窗口，并把 AppKit
 /// 菜单/状态栏入口转发到 SwiftUI 场景。

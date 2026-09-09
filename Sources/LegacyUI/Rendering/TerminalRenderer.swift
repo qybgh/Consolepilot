@@ -1,5 +1,6 @@
 import AppKit
 import ConsolepilotDomain
+import ConsolepilotInfrastructure
 
 @MainActor
 final class TerminalRenderer {

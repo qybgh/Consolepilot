@@ -1,10 +1,10 @@
 import Foundation
 import GRDB
 
-final class AppDatabase {
+package final class AppDatabase {
     let writer: DatabaseWriter
 
-    init(path: String? = nil, trace: (@Sendable (String) -> Void)? = nil) throws {
+    package init(path: String? = nil, trace: (@Sendable (String) -> Void)? = nil) throws {
         let databasePath = path ?? Self.defaultPath()
         let directory = URL(fileURLWithPath: databasePath).deletingLastPathComponent()
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

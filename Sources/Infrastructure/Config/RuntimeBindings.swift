@@ -5,11 +5,11 @@ import Foundation
 /// Provider construction and Carbon registration stay behind this seam so a
 /// config reload never exposes a partially updated runtime.
 @MainActor
-final class RuntimeBindings {
+package final class RuntimeBindings {
     private let providerFactory: (ProviderKind) -> any AIProvider
     private(set) var providers: [ProviderKind: any AIProvider] = [:]
     let hotkeys: HotkeyRegistry
-    var onAction: ((String) -> Void)?
+    package var onAction: ((String) -> Void)?
 
     init(
         config: AppConfig,
@@ -21,7 +21,7 @@ final class RuntimeBindings {
         apply(config)
     }
 
-    init(
+    package init(
         configStore: ConfigStore,
         systemHotkeys: Bool = false,
         providerFactory: @escaping (ProviderKind) -> any AIProvider
@@ -58,7 +58,7 @@ final class RuntimeBindings {
         hotkeys.replaceAll(nextHotkeys)
     }
 
-    func provider(for kind: ProviderKind) -> (any AIProvider)? { providers[kind] }
+    package func provider(for kind: ProviderKind) -> (any AIProvider)? { providers[kind] }
 
-    func shutdown() { hotkeys.removeAll() }
+    package func shutdown() { hotkeys.removeAll() }
 }

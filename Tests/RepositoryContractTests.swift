@@ -1,7 +1,7 @@
 import ConsolepilotDomain
 import XCTest
 
-@testable import ConsolepilotCore
+@testable import ConsolepilotInfrastructure
 
 /// P0-C 空壳契约测试：以内存 fake 固定四个 Repository 协议的存在与契约方向，
 /// 供 P1-B 的 SQLite/文件实现对照（fake 不代表最终实现语义）。

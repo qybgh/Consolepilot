@@ -4,10 +4,10 @@ import GRDB
 import Observation
 
 @MainActor @Observable
-final class UsageStore {
+package final class UsageStore {
     private let database: AppDatabase
 
-    init(database: AppDatabase) { self.database = database }
+    package init(database: AppDatabase) { self.database = database }
 
     func record(_ usage: Usage) {
         do {
@@ -16,7 +16,7 @@ final class UsageStore {
         } catch { Log.error("保存用量失败：\(error)", category: .domain) }
     }
 
-    func summary(period: UsagePeriod) -> UsageSummary {
+    package func summary(period: UsagePeriod) -> UsageSummary {
         do {
             let records = try database.writer.read { db in
                 try UsageRecord.fetchAll(db).map(\.entity)
