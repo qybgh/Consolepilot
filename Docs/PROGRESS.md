@@ -10,7 +10,7 @@
 |---|---|---|
 | Preflight（工具/基线/文档） | 完成 | 见下方基线记录 |
 | P0-A 工程化（XcodeGen+Makefile+同构迁移） | 完成 | 见 P0-A 验收记录（2026-09-09） |
-| P0-B 入口替换与最小 SwiftUI 骨架 | 未开始 | — |
+| P0-B 入口替换与最小 SwiftUI 骨架 | 部分完成（待实机复查两项修复） | 见 P0-B 验收记录（2026-09-09） |
 | P0-C 协议/用例空壳与清理 | 未开始 | — |
 | P1-A 8-target 拆分 | 未开始 | — |
 | P1-B 领域与存储 | 未开始 | — |
@@ -47,6 +47,21 @@
   - `make lint`：swift-format strict 0 违规、SwiftLint strict 0 违规、`xcodebuild analyze` 通过、密钥扫描 0 命中、xcodeproj 漂移检查通过、periphery 仅报告 P0-B/P1 待删旧 UI 层遗留（报告性，`|| true`，P1-F 清零）。
 - 清理：`Package.swift`/`Package.resolved`/`Scripts/*` 已删除（旧 SwiftPM 入口不再并存）；`.idea/`、`Consolepilot.iml` 已从工作区移除并 gitignore；README 已更新为 Makefile/XcodeGen 指引。
 - 遗留：periphery 旧 UI 层报告项（ConsolepilotRootView/KeychainStore 未用符号/SecretResolver 冗余 public/Rendering 未用符号等）→ P0-B/P1 删除与清理范围；真实签名/notarization 仍按「P0 仅本机验证」策略不在此阶段处理。
+
+---
+
+
+### P0-B 验收记录（2026-09-09）
+
+- 范围：删除 AppKit `@main`，`ConsolepilotApp: App`（`WindowGroup("main")` + `Settings` 场景）接管；旧根视图经 `RootHostView`（NSViewRepresentable）承载；设置编辑器迁入 SwiftUI `Settings` 场景；菜单栏/状态栏/用量窗口保留 AppKit 入口；`WindowActivationPolicy` 统一激活策略；删除 `ConsoleWindowController`/`DependencyContainer`。
+- 引擎根视图生命周期：由 `MainWindowCoordinator` 持有（单例），主窗口关闭/重建不销毁引擎（会话/配置/流状态跨窗口存活）。
+- 人工 QA 发现并已修复两项：
+  1. **重复主窗口**：旧实现同时保留 AppKit「关闭=隐藏 + `applicationShouldHandleReopen`」与 SwiftUI 原生重建，Dock 重新唤起会出现两个同内容窗口。修复：移除 reopen 处理与关闭拦截，主窗口真正关闭，Dock 唤起由 SwiftUI 重建唯一窗口并重新挂载同一引擎根视图。本机验证：关闭主窗口后经 `open -a` 唤起连续 3+ 轮均只出现 1 个主窗口。
+  2. **Settings 不适配窄屏**：竖屏副屏（540×960 逻辑点）下 Settings 以 880pt 理想宽度打开，右半（按钮/滚动条）落到屏外。修复：`SettingsWindowLayout` 收敛规则 + 屏幕感知 `intrinsicContentSize`（窗口挂载/成为 key/换屏时收敛到可见区域，顶部对齐保证标题栏可拖拽）。本机验证：内建屏打开=900×668；拖到 540 宽副屏自动收敛为 508×668 且完整可见；无抖动/循环。
+- 门禁证据（本机 GUI 会话，2026-09-09）：
+  - `make test`：**77 项全部通过**。
+  - `make build`（Debug）：`** BUILD SUCCEEDED **`；`make lint`：swift-format/SwiftLint strict 0 违规、`xcodebuild analyze` 通过、漂移检查通过。
+- 待办：你在本机/副屏上按 QA 清单复查「Dock 重新唤起仅 1 个窗口」与「Settings 在窄屏完整可用」后，本阶段转“完成”并进入 P0-C。
 
 ---
 
