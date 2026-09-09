@@ -230,3 +230,15 @@
   - `make lint` 新增 `Scripts/check-imports.py` 依赖方向门禁：逐文件校验 Consolepilot 模块族 import 不得向上/越层（当前 0 违规）。
 - 门禁证据：`make test` 83 项全绿；`make build` Debug 全 target 通过；`make lint` 全绿（drift/swift-format/SwiftLint/analyze/密钥扫描/import 方向零违规；periphery 报告仅 `|| true` 记录——因 `package` 跨模块引用 periphery 误报为未使用，P1-F 清零时按真实引用复核）。
 - 残留（明确归属后续阶段）：Transport `[String: Any]` DTO → P1-D 强类型化；ActionRunner/StreamCoordinator 过渡居所 → P1-C/E；periphery 误报清单 → P1-F；旧 SwiftPM 模块名 `ConsolepilotCore` 全仓库 grep 为 0。
+
+### P1-B 验收记录（Repository 实现，2026-09-09）
+
+- 提交：`d4babc2 feat: implement SQLite/file repositories on Domain contracts (P1-B)`。
+- 新增 `Sources/Infrastructure/Repositories/`：
+  - `SQLiteSessionRepository`（fetchSessions/fetchSession/fetchMessages 最新在前分页/search/save/delete 级联）。
+  - `SQLiteUsageRepository`（record + fetchSummary 按 today/week/all 周期过滤聚合）。
+  - `SQLiteCaptureAuditRepository`（只落元数据，无正文列）。
+  - `FileConfigurationRepository`（解析+校验通过才原子替换 current；失败抛 ConfigError 且保留最后有效配置；无文件监听，UI 热重载仍由 ConfigStore 负责）。
+- `UsageAggregator` 抽为 Stores 与 Repository 共用，消除汇总规则重复。
+- 门禁：新增 `Tests/SQLiteRepositoryTests.swift` 7 项（temp-file SQLite 每次隔离=内存库语义、WAL journal 断言、分页边界、重开持久化 checkpoint、用量周期聚合、审计仅元数据、配置 last-good）；**90 项全绿**。
+- 依赖门禁加强：`Scripts/check-imports.py` 现同时禁止 Domain/Application import GRDB/AppKit/SwiftUI/Security/Network/Carbon/TOMLDecoder/Observation/CoreText/Combine（纯净层约束），当前 0 违规。
