@@ -11,7 +11,7 @@
 
 | # | 决策 | 对本计划的覆盖 |
 |---|---|---|
-| D1 | Apple Development 证书已在本机生成并验证生效（`1217194271@qq.com` / WCHFR3G7VB） | 本机安装与真机调试可签名；发布形态仍按第 1 节 ad-hoc ZIP/CLI，不引入 Developer ID / 公证 / 沙盒 |
+| D1 | Apple Development 证书已在本机生成并验证生效（`1217194271@qq.com` / WCHFR3G7VB） | 本机安装与真机调试可签名；**2026-09-09 验收修订：交付签名默认使用本证书（`make build`/`make release`，`SIGN_IDENTITY=-` 回退 ad-hoc）**，不引入 Developer ID / 公证 / 沙盒 |
 | D2 | 提供一台 macOS 14 电脑用于实机测试 | §6 实机验收：macOS 15 轮次用本机、macOS 14 轮次用该设备 |
 | D3 | 需提前安装的命令环境由用户自行安装，仅需安装命令 | `brew install swiftlint`、`brew install periphery`；swift-format 已随 Xcode 就绪 |
 | D4 | 不单独做 Gate 0.3 临时 spike | §4 Gate 0 第 3 项改为并入 **P0 第 1 步**（建 Xcode 工程）DoD：先搭最小 SwiftUI App 骨架（WindowGroup + Settings + 菜单栏 + 无焦点激活验证） |
@@ -26,7 +26,7 @@
 - 平台：Apple Silicon，macOS 14 与 macOS 15；发布包仅构建和验收 arm64，不宣称 Intel 支持。
 - UI：迁移至完整 SwiftUI 生命周期；允许保留 AppKit/Carbon/Accessibility 作为系统能力适配层，不保留 AppKit 页面实现。
 - 架构：MVVM + Use Cases；View 不直接访问数据库、Provider、Keychain、Capture 或 LocalServer。
-- 交付：Xcode 工程为唯一权威构建入口，Makefile 为唯一命令入口；本机 ad-hoc 签名 ZIP 和 CLI，不引入 Developer ID、公证、自动更新或 App Store 沙盒。
+- 交付：Xcode 工程为唯一权威构建入口，Makefile 为唯一命令入口；本机 Apple Development 证书签名 ZIP 和 CLI（稳定签名身份，授权跨重建保留；无证书环境 `SIGN_IDENTITY=-` 回退 ad-hoc），不引入 Developer ID、公证、自动更新或 App Store 沙盒。
 - 数据：允许一次性清空已有本地 SQLite 会话、消息、用量与捕获元数据。~~升级界面必须显式提示并要求用户确认，未确认则不删除、不迁移、不启动新版本数据层~~（0.0 决策 D8 取代：**不做 app 内确认页**；清空为手动一次性外部动作，新数据层全新建库）。
 - UI 标准：功能等价并小幅优化，保留终端风格、聊天、会话、设置、用量、菜单栏和后台 Action 的核心体验。
 - 隐私：配置仅允许 Keychain/环境变量密钥引用；日志、测试 fixture、诊断和数据库捕获日志不得保存 API 密钥或捕获正文。
@@ -40,7 +40,7 @@
 | swift-format | 随 XcodeDefault toolchain 就绪 | ✅ 无需安装 |
 | SwiftLint | 未安装 → 用户执行 `brew install swiftlint`（D3） | ⏳ 用户安装 |
 | Periphery | 未安装 → 用户执行 `brew install periphery`（D3；formula 已 deprecated，失败时备用 `brew install peripheryapp/periphery/periphery`） | ⏳ 用户安装 |
-| 签名身份 | Apple Development 证书已生成并验证（`1217194271@qq.com` / WCHFR3G7VB）；发布形态 ad-hoc（D1） | ✅ |
+| 签名身份 | Apple Development 证书已生成并验证（`1217194271@qq.com` / WCHFR3G7VB / Team `3CSL8ZN3AN`）；**发布形态默认本证书签名，ad-hoc 仅作回退（D1 修订 2026-09-09）** | ✅ |
 | 实机 | macOS 14 电脑已提供；macOS 15 轮次用本机（D2） | ✅ |
 | 测试基线 | `swift test --disable-sandbox`：77 项执行 / 74 通过 / 3 失败（NSPasteboard、Keychain 沙箱环境件，GUI 会话可跑） | ✅ 基线已记录 |
 | 测试凭据 / 账户 | 真实 Provider 低权限凭据、独立测试账户未提供 | ⬜ 验收矩阵开放项 |
@@ -140,7 +140,7 @@
    - `make test`：运行全部 XCTest、UI test 与性能测试。
    - `make lint`：执行 swift-format、SwiftLint、编译器 warnings-as-errors、静态 analyze、依赖与密钥扫描。
    - `make build`：Debug arm64 App + CLI。
-   - `make release VERSION=x.y.z`：Release arm64 App + CLI、ad-hoc 签名、验证、ZIP、SHA-256 manifest。
+   - `make release VERSION=x.y.z`：Release arm64 App + CLI、Apple Development 证书签名（`SIGN_IDENTITY=-` 回退 ad-hoc）、验证、ZIP、SHA-256 manifest。
    - `make clean`：仅删除明确的 DerivedData/Build/Release 临时产物，不删除用户数据或源码。
 3. 重建 Domain/Application 协议和 use case 空壳，将现有行为以测试固定下来。
 4. 建立统一 composition root；删除未接线的 `DependencyContainer`，不保留“未来可能使用”的容器。

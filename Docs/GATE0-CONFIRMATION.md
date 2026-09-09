@@ -37,7 +37,7 @@
 
 | # | 决策项 | 用户结论（原文要点） | 对实施的影响 |
 |---|---|---|---|
-| D1 | 开发者证书 | 已在本机生成开发者证书：`Apple Development: 1217194271@qq.com (WCHFR3G7VB)`；`security find-identity -v -p codesigning` 已可查到该身份（SHA-1 `660E631A9EAC4C48F1424C3C0D87919CCBD13B13`） | Gate 0.1 签名身份由「仅 ad-hoc」更新为「有 Apple Development 证书」：本机安装/真机调试可签名；发布形态仍按计划以 ad-hoc ZIP/CLI 为主，不引入 Developer ID / 公证 / 沙盒 |
+| D1 | 开发者证书 | 已在本机生成开发者证书：`Apple Development: 1217194271@qq.com (WCHFR3G7VB)`；`security find-identity -v -p codesigning` 已可查到该身份（SHA-1 `660E631A9EAC4C48F1424C3C0D87919CCBD13B13`） | Gate 0.1 签名身份由「仅 ad-hoc」更新为「有 Apple Development 证书」：本机安装/真机调试可签名。**2026-09-09 验收修订：发布形态默认改用本证书签名（Team `3CSL8ZN3AN`，稳定 designated requirement，辅助功能/钥匙串授权跨重建保留），ad-hoc 仅作无证书环境回退**；不引入 Developer ID / 公证 / 沙盒 |
 | D2 | 实机测试 | 另有一台 **macOS 14** 电脑可用于实机测试 | macOS 15 轮次用本机（macOS 15.7.9 arm64）、macOS 14 轮次用该设备；两代双机物理条件具备 |
 | D3 | 命令环境准备 | 需提前安装的命令环境由**用户自行安装**，只给安装命令 | 交付 `brew install swiftlint`、`brew install periphery`（备用 `brew install peripheryapp/periphery/periphery`）；swift-format 已随 Xcode 就绪无需安装；不代为执行安装 |
 | D4 | Gate 0.3 方式 | **不单独做 Gate 0.3 临时 spike**；在 **P0 第 1 步建 Xcode 工程时**先搭最小 SwiftUI App 骨架（WindowGroup + Settings + 菜单栏 + 无焦点激活验证）作为该阶段 DoD 的一部分 | Gate 0.3 结项为「并入 P0 Step 1 DoD」；最小骨架验证点进入 P0 第 1 步验收 |

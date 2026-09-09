@@ -16,7 +16,7 @@ sudo sysadminctl -addUser consolepilot-test -password "仅测试用随机密码"
 
 1. 将 `dist/Consolepilot-0.2.0-p1.zip` 传到 macOS 14（AirDrop/移动盘），解压。
 2. `cd <解压目录> && shasum -a 256 -c SHA256SUMS.txt`
-3. `codesign --verify --deep --strict --verbose=2 Consolepilot.app`
+3. `codesign --verify --deep --strict --verbose=2 Consolepilot.app`；`codesign -dv Consolepilot.app` 应显示 `TeamIdentifier=3CSL8ZN3AN`、Authority 含 `Apple Development: 1217194271@qq.com (WCHFR3G7VB)`（开发者证书签名，非 ad-hoc）
 4. 首次被 Gatekeeper 拦截时：右键 Consolepilot.app →“打开”，或
    `xattr -dr com.apple.quarantine Consolepilot.app`
 5. 启动 App；如弹“辅助功能”权限提示，在 系统设置→隐私与安全性→辅助功能 授予本 App。
@@ -62,7 +62,7 @@ sudo sysadminctl -addUser consolepilot-test -password "仅测试用随机密码"
 ## 6. 退出/重启检查点
 
 - [ ] 6.1 流式中 `⌘Q` 退出 → 重启后该会话已收内容可见（checkpoint）
-- [ ] 6.2 卸载/清理只删除 App 自身文件（配置删除为手动一次性动作，无 app 内清库入口）
+- [ ] 6.2 卸载/清理只删除 App 自身文件：运行仓库 `./uninstall.sh --yes` 后确认 `~/.config/consolepilot`、`~/Library/Application Support/Consolepilot` 与偏好域已清空（钥匙串密钥默认保留）
 
 ## 7. 真实 Provider（待凭据，暂缓）
 

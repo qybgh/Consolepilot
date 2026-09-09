@@ -27,7 +27,7 @@ make bootstrap   # 校验 Xcode/工具链/依赖/架构（一次性）
 make test        # 全量测试：xcodebuild test -scheme Consolepilot（GUI 会话须全绿）
 make lint        # 门禁：swift-format + SwiftLint strict + analyze + import 方向 + 残留扫描 + 密钥扫描 + periphery + xcodeproj 漂移检查
 make build       # Debug arm64 构建 App + CLI（产物在 build/）
-make release VERSION=0.2.0-p1   # Release + ad-hoc 签名 + ZIP + SHA-256 manifest（dist/）
+make release VERSION=0.2.0-p1   # Release + Apple Development 证书签名 + ZIP + SHA-256 manifest（dist/；SIGN_IDENTITY=- 可回退 ad-hoc）
 make clean       # 清理构建产物；make distclean 深度清理（含 .build）
 ```
 
@@ -38,4 +38,5 @@ make clean       # 清理构建产物；make distclean 深度清理（含 .build
 ## 安装/卸载
 
 - 安装：解压 `dist/Consolepilot-<version>.zip`，将 `Consolepilot.app` 拖入 `/Applications`，CLI 放任意 PATH 目录即可。
-- 卸载：删除 App 与 CLI，并清理 `~/.config/consolepilot/`、`~/Library/Application Support/Consolepilot/`（如有残留）。
+- 签名：默认使用本机 Apple Development 证书（`WCHFR3G7VB`）。稳定签名身份保证更新/重装后“辅助功能”与钥匙串授权不失效；无证书环境用 `make build SIGN_IDENTITY=-` 回退 ad-hoc。详见 `Docs/UNINSTALL.md` 与故障排查。
+- 卸载：将 App 与 CLI 移入废纸篓后，运行 `./uninstall.sh`（或 `make uninstall`）清理配置/数据库/偏好/缓存并重置辅助功能授权；钥匙串密钥默认保留。残留清单与规范参考见 `Docs/UNINSTALL.md`。
