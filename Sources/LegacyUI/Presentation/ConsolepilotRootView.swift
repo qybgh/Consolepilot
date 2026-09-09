@@ -1087,7 +1087,11 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
         let history = sessionStore.messages.map { ChatMessage(role: $0.role, content: $0.content) }
         let apiKey: String
         do {
-            apiKey = try SecretResolver().resolve(profile.apiKeyRef)
+            apiKey = try SecretResolver().resolvedProfileKey(profileId: profile.id, reference: profile.apiKeyRef)
+        } catch let error as ConfigError {
+            statusLabel.stringValue = error.userMessage
+            inputView.isEditable = true
+            return
         } catch {
             statusLabel.stringValue = "Profile \(profile.id) 密钥不可用：\(error.localizedDescription)"
             inputView.isEditable = true

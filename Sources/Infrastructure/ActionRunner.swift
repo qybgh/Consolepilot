@@ -95,7 +95,7 @@ package final class ActionRunner {
         if provider is MockAIProvider {
             apiKey = ""
         } else {
-            apiKey = try secrets.resolve(profile.apiKeyRef)
+            apiKey = try secrets.resolvedProfileKey(profileId: profile.id, reference: profile.apiKeyRef)
         }
         // 独立会话续写：携带该会话完整历史作为上下文，仅保留 user/assistant 轮次。
         let history = sessionStore.history(sessionId: session.id)
