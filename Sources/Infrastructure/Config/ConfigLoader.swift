@@ -189,6 +189,15 @@ public enum LocalServerClientConfiguration {
         try ConfigLoader().resolveConfigURL()
     }
 
+    /// 返回随应用分发的初始默认配置文本（设置窗口「初始化」按钮使用），
+    /// 与首次启动自动落盘的模板一致；内容不含任何密钥。
+    public static func defaultConfigurationText() throws -> String {
+        guard let url = ConfigLoader.bundledDefaultConfigURL() else {
+            throw ConfigError.invalid("找不到随应用分发的默认配置（DefaultConfig.toml）")
+        }
+        return try String(contentsOf: url, encoding: .utf8)
+    }
+
     public static func resolveToken() throws -> String {
         let config = try ConfigLoader().loadValidated()
         return try SecretResolver().resolve(config.server.authTokenRef)

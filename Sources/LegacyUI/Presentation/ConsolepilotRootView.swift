@@ -1086,24 +1086,31 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
         reloadSessionButtons()
         let profile = selectedProfile()
         let history = sessionStore.messages.map { ChatMessage(role: $0.role, content: $0.content) }
+        // 与 ActionRunner 的判定保持一致：仅当请求实际落到远程 Provider 时才要求
+        // API Key。本地 Mock（默认配置/回环/未开启 allowRealProvider）无需密钥，
+        // 否则首次安装的默认 Mock 配置也会被「未配置 apiKey」错误拦截。
+        let provider = runtimeBindings?.provider(for: profile.provider) ?? mockProvider
         let apiKey: String
-        do {
-            apiKey = try SecretResolver().resolvedProfileKey(profileId: profile.id, reference: profile.apiKeyRef)
-        } catch let error as ConfigError {
-            statusLabel.stringValue = error.userMessage
-            inputView.isEditable = true
-            return
-        } catch {
-            statusLabel.stringValue = "Profile \(profile.id) 密钥不可用：\(error.localizedDescription)"
-            inputView.isEditable = true
-            return
+        if provider is MockAIProvider {
+            apiKey = ""
+        } else {
+            do {
+                apiKey = try SecretResolver().resolvedProfileKey(profileId: profile.id, reference: profile.apiKeyRef)
+            } catch let error as ConfigError {
+                statusLabel.stringValue = error.userMessage
+                inputView.isEditable = true
+                return
+            } catch {
+                statusLabel.stringValue = "Profile \(profile.id) 密钥不可用：\(error.localizedDescription)"
+                inputView.isEditable = true
+                return
+            }
         }
         let request = ChatRequest(
             profile: profile, apiKey: apiKey, systemPrompt: nil, messages: history, overrides: nil)
         let sessionId = session.id
         requestTasks[sessionId] = Task { @MainActor [weak self] in
             guard let self else { return }
-            let provider = self.runtimeBindings?.provider(for: profile.provider) ?? self.mockProvider
             await coordinator.consume(provider.stream(request), into: sessionId)
             requestTasks.removeValue(forKey: sessionId)
             reloadSessionButtons()

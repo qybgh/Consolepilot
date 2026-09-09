@@ -272,6 +272,16 @@ final class InfrastructureTests: XCTestCase {
         XCTAssertTrue(report.errors.isEmpty, report.errors.map(\.message).joined(separator: "\n"))
     }
 
+    func testDefaultConfigurationTextMatchesBundledTemplateAndValidates() throws {
+        // 设置窗口「初始化」按钮依赖该公开入口：返回内容必须与随应用分发的
+        // 默认模板一致、非空，且能通过完整校验（保存后可直接热重载生效）。
+        let text = try LocalServerClientConfiguration.defaultConfigurationText()
+        let bundledURL = try XCTUnwrap(ConfigLoader.bundledDefaultConfigURL())
+        XCTAssertEqual(text, try String(contentsOf: bundledURL, encoding: .utf8))
+        XCTAssertFalse(text.isEmpty)
+        XCTAssertNoThrow(try LocalServerClientConfiguration.validate(text))
+    }
+
     @MainActor
     func testConfigStoreRejectsInvalidReloadAndKeepsPreviousConfig() throws {
         let directory = FileManager.default.temporaryDirectory

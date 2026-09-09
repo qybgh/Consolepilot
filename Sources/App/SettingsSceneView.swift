@@ -58,6 +58,7 @@ final class SettingsEditorView: NSView, NSTextViewDelegate {
     private let saveButton = NSButton(title: "保存更改", target: nil, action: nil)
     private let discardButton = NSButton(title: "放弃更改", target: nil, action: nil)
     private let reloadButton = NSButton(title: "重新读取", target: nil, action: nil)
+    private let initButton = NSButton(title: "初始化", target: nil, action: nil)
     private var configURL: URL?
     private var isDirty = false
     private var isLoading = false
@@ -219,13 +220,14 @@ final class SettingsEditorView: NSView, NSTextViewDelegate {
         textView.textContainer?.widthTracksTextView = true
         textView.textContainer?.lineBreakMode = .byCharWrapping
 
-        for button in [saveButton, discardButton, reloadButton] {
+        for button in [initButton, saveButton, discardButton, reloadButton] {
             button.translatesAutoresizingMaskIntoConstraints = false
             button.bezelStyle = .rounded
             button.controlSize = .regular
             // Keep the action bar stable; intrinsic button widths can otherwise
-            // expand when the status label or window size changes.
-            button.widthAnchor.constraint(equalToConstant: 116).isActive = true
+            // expand when the status label or window size changes. 92pt keeps
+            // all four buttons in one row at the 420pt minimum content width.
+            button.widthAnchor.constraint(equalToConstant: 92).isActive = true
         }
         saveButton.keyEquivalent = "\r"
         saveButton.target = self
@@ -234,12 +236,14 @@ final class SettingsEditorView: NSView, NSTextViewDelegate {
         discardButton.action = #selector(discardChanges)
         reloadButton.target = self
         reloadButton.action = #selector(reloadConfig)
+        initButton.target = self
+        initButton.action = #selector(initializeConfig)
         statusLabel.translatesAutoresizingMaskIntoConstraints = false
         statusLabel.textColor = NSColor(calibratedWhite: 0.68, alpha: 1)
         statusLabel.font = NSFont.systemFont(ofSize: 11)
         statusLabel.lineBreakMode = .byTruncatingMiddle
 
-        let buttonStack = NSStackView(views: [saveButton, discardButton, reloadButton])
+        let buttonStack = NSStackView(views: [saveButton, discardButton, reloadButton, initButton])
         buttonStack.translatesAutoresizingMaskIntoConstraints = false
         buttonStack.orientation = .horizontal
         buttonStack.spacing = 8
@@ -289,6 +293,33 @@ final class SettingsEditorView: NSView, NSTextViewDelegate {
 
     @objc private func reloadConfig() { loadConfig() }
     @objc private func discardChanges() { loadConfig() }
+
+    /// 「初始化」：把编辑器内容恢复为随应用分发的初始默认配置，不直接落盘；
+    /// 点「保存更改」才覆盖磁盘配置，点「放弃更改」可回到当前磁盘内容。
+    @objc private func initializeConfig() {
+        do {
+            let content = try LocalServerClientConfiguration.defaultConfigurationText()
+            let url: URL
+            if let configURL {
+                url = configURL
+            } else {
+                url = try LocalServerClientConfiguration.resolveURL()
+                configURL = url
+            }
+            let diskContent = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
+            isLoading = true
+            textView.string = content
+            isLoading = false
+            isDirty = content != diskContent
+            statusLabel.stringValue = "已载入初始默认配置 · 点「保存更改」生效，点「放弃更改」可撤销"
+            statusLabel.toolTip = nil
+            updateButtonState()
+        } catch {
+            let message = Self.userFacingConfigError("初始化失败", error)
+            statusLabel.stringValue = message
+            statusLabel.toolTip = message
+        }
+    }
 
     @objc private func saveConfig() {
         guard let url = configURL else { return }
