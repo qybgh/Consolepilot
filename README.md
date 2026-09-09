@@ -2,13 +2,19 @@
 
 macOS 上的本地 AI 控制台工具：捕获选中文本/剪贴板，通过本地或远程 OpenAI-compatible/Anthropic 服务执行问答，支持全局快捷键、菜单栏与 Action 后台执行。
 
-> 状态：P0（XcodeGen 工程化 + 同构迁移）完成；P1（8-target 拆分 + Provider/Action 可靠性）实施中。执行计划见 `Docs/PLAN.md`，进度见 `Docs/PROGRESS.md`，编码规范见 `Docs/CODING-STYLE.md`。
+> 状态：P0（XcodeGen 工程化 + 同构迁移）完成；P1-A（多模块拆分）完成，P1-B…F 实施中。执行计划见 `Docs/PLAN.md`，进度见 `Docs/PROGRESS.md`，编码规范见 `Docs/CODING-STYLE.md`。
 
 ## 工程结构
 
 - `project.yml`：工程唯一编辑源（XcodeGen）。改工程先改它，再执行 `make xcodegen`。
 - `Consolepilot.xcodeproj`：由 XcodeGen 生成并提交，`make lint` 内含漂移检查。
-- `Sources/`：源码（App/CLI/Domain/Application/Infrastructure/Rendering/Transport；Domain 内含 `Models/Stores/Repositories/UseCases`）。
+- `Sources/`：按 target 分层（依赖只能向下）：
+  - `Sources/Domain` → `ConsolepilotDomain`（纯模型/配置值对象/错误/协议/用例契约，禁 UI/GRDB/Network/Keychain）。
+  - `Sources/Application` → `ConsolepilotApplication`（Use Case 实现，P1-C/E 前为占位）。
+  - `Sources/Infrastructure` + `Sources/Transport` → `ConsolepilotInfrastructure`（GRDB/存储/配置/捕获/密钥/HTTP+SSE Provider；ActionRunner/StreamCoordinator 为 P1-C/E 重写前的过渡居所）。
+  - `Sources/LegacyUI` → `ConsolepilotLegacyUI`（遗留 AppKit UI + Rendering，P2 删除）。
+  - `Sources/App` → `Consolepilot`（App composition root + SwiftUI 生命周期）；`Sources/CLI` → `consolepilot`。
+- 跨模块可见性统一用 `package`（`OTHER_SWIFT_FLAGS = -package-name Consolepilot`），不扩大 public API；`make lint` 内含 `Scripts/check-imports.py` 依赖方向门禁。
 - `Tests/`：XCTest 测试（经 Xcode scheme 运行）。
 - `Resources/`：`Info.plist`（版本号走 xcconfig 变量）与 entitlements。
 - `Configs/`：Debug/Release `.xcconfig`（Swift 6 严格并发、warnings-as-errors）。

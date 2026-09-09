@@ -214,3 +214,19 @@
 - 纯化：FrontmostInfo/UsageSummary 移入 Domain；UsageStore 不再定义 UsagePeriod/UsageSummary；GRDB record（*Record.swift）留在 Infrastructure 并与实体分离。
 - 门禁：`make test` 83 项全绿；swift-format strict / SwiftLint strict / xcodebuild analyze / 密钥扫描全过；xcodegen 漂移幂等。
 - 遗留（后续 slice）：Domain 目录下 ActionRunner/StreamCoordinator/Stores 因依赖 AppKit/GRDB 暂编入实现层，P1-C/E 重写时归位。
+
+### P1-A 验收记录（多模块拆分完成，2026-09-09）
+
+- 提交：`b803d05`（Domain 提取）、`e045c8e`（Application 提取）、`25774ed`（Infrastructure/LegacyUI 拆分，溶解 ConsolepilotCore）、`c9bd6e7`（测试 import 清理）、docs 本段。
+- 最终 target 集（7 个，Presentation/UITests 留 P2）：
+  1. `ConsolepilotDomain`：Sources/Domain（Models/Repositories/UseCases/Config + TemplateEngine/AppError/Log/HotkeySpec），纯值类型/协议，禁 UI/GRDB/Network/Keychain。
+  2. `ConsolepilotApplication`：Sources/Application（两个用例占位实现，P1-C/E 前不接线）。
+  3. `ConsolepilotInfrastructure`：Sources/Infrastructure + Sources/Transport + Sources/Infrastructure/Stores；GRDB 记录/Stores/配置/捕获/密钥/HTTP+SSE Provider；ActionRunner 与 StreamCoordinator 因仍耦合 AppKit/GRDB/Transport，作为过渡文件居于此模块，P1-C/E 重写后归位 Application。
+  4. `ConsolepilotLegacyUI`：Sources/LegacyUI（原 Infrastructure/Presentation + Rendering 共 10 文件），遗留 AppKit UI + 渲染过渡组，P2 删除。
+  5. `Consolepilot`（App composition root + SwiftUI 生命周期）；6. `consolepilot` CLI；7. `ConsolepilotTests`。
+- 关键实现决策（本次新增、已按「干净/可测试」落地）：
+  - 跨模块可见性统一 `package`（project.yml base `OTHER_SWIFT_FLAGS = -package-name Consolepilot`），避免扩大 public API；Domain 早期 public 化保留至 P1-E 清理废弃字段时再回收。
+  - 遗留 UI 不放进 App 可执行模块：Xcode 可执行模块不可被 hosted 单测 `@testable import`（实测 `no such module`，DEFINES_MODULE/SWIFT_EMIT_MODULE 无效），故遗留组单独成框架 `ConsolepilotLegacyUI` 保证 RenderingTests 可测；P2 删除该模块即完成过渡。
+  - `make lint` 新增 `Scripts/check-imports.py` 依赖方向门禁：逐文件校验 Consolepilot 模块族 import 不得向上/越层（当前 0 违规）。
+- 门禁证据：`make test` 83 项全绿；`make build` Debug 全 target 通过；`make lint` 全绿（drift/swift-format/SwiftLint/analyze/密钥扫描/import 方向零违规；periphery 报告仅 `|| true` 记录——因 `package` 跨模块引用 periphery 误报为未使用，P1-F 清零时按真实引用复核）。
+- 残留（明确归属后续阶段）：Transport `[String: Any]` DTO → P1-D 强类型化；ActionRunner/StreamCoordinator 过渡居所 → P1-C/E；periphery 误报清单 → P1-F；旧 SwiftPM 模块名 `ConsolepilotCore` 全仓库 grep 为 0。
