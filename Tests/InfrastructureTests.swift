@@ -282,6 +282,79 @@ final class InfrastructureTests: XCTestCase {
         XCTAssertNoThrow(try LocalServerClientConfiguration.validate(text))
     }
 
+    func testConfigLoaderParsesContextBudgetFieldsAndDefaults() throws {
+        let text = """
+            [general]
+            port = 8765
+            [server]
+            authToken = ""
+            [capture]
+            strategy = ["clipboard"]
+            [[profiles]]
+            id = "local"
+            provider = "openai"
+            baseURL = "http://127.0.0.1:11434/v1"
+            model = "test"
+            apiKey = ""
+            maxContextBytes = 2048
+            [[actions]]
+            id = "ask"
+            name = "Ask"
+            profile = "local"
+            userPrompt = "{{input}}"
+            input = "prompt"
+            maxContextBytes = 4096
+            """
+        let config = try ConfigLoader().parse(text)
+        XCTAssertEqual(config.profiles.first?.maxContextBytes, 2048)
+        XCTAssertEqual(config.actions.first?.maxContextBytes, 4096)
+
+        let defaultsText = """
+            [general]
+            port = 8765
+            [server]
+            authToken = ""
+            [capture]
+            strategy = ["clipboard"]
+            [[profiles]]
+            id = "local"
+            provider = "openai"
+            baseURL = "http://127.0.0.1:11434/v1"
+            model = "test"
+            apiKey = ""
+            [[actions]]
+            id = "ask"
+            name = "Ask"
+            profile = "local"
+            userPrompt = "{{input}}"
+            input = "prompt"
+            """
+        let defaults = try ConfigLoader().parse(defaultsText)
+        XCTAssertEqual(defaults.profiles.first?.maxContextBytes, 131_072)
+        XCTAssertNil(defaults.actions.first?.maxContextBytes)
+    }
+
+    func testConfigValidatorRejectsTinyContextBudgets() {
+        let base = validConfig()
+        let tinyProfile = Profile(
+            id: "local", provider: .openai, baseURL: URL(string: "http://127.0.0.1:11434/v1")!,
+            model: "test", apiKeyRef: "", temperature: 0.3, maxTokens: 100, timeoutSec: 30,
+            maxContextBytes: 512, priceInput: nil, priceOutput: nil)
+        let profileConfig = AppConfig(
+            general: base.general, server: base.server, capture: base.capture,
+            profiles: [tinyProfile], actions: [])
+        assertError(.valueOutOfRange, in: profileConfig)
+
+        let tinyAction = Action(
+            id: "ask", name: "Ask", hotkey: nil, profileId: "local", systemPrompt: nil,
+            userPrompt: "{{input}}", input: .prompt, sessionMode: .dedicated, timeoutSec: nil,
+            maxContextBytes: 0, autoShow: true, notifyOnDone: false, overrides: nil)
+        let actionConfig = AppConfig(
+            general: base.general, server: base.server, capture: base.capture,
+            profiles: base.profiles, actions: [tinyAction])
+        assertError(.valueOutOfRange, in: actionConfig)
+    }
+
     @MainActor
     func testConfigStoreRejectsInvalidReloadAndKeepsPreviousConfig() throws {
         let directory = FileManager.default.temporaryDirectory
@@ -630,6 +703,67 @@ final class InfrastructureTests: XCTestCase {
     }
 
     @MainActor
+    func testActionRunnerTrimsHistoryToActionContextBudget() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ConsolepilotActionTrim-\(UUID().uuidString)", isDirectory: true)
+        let url = directory.appendingPathComponent("config.toml")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let configText = """
+            [general]
+            port = 8765
+            theme = "tokyo-night"
+            opacity = 0.92
+            scrollbackLines = 100000
+            [server]
+            authToken = "${env:CONSOLEPILOT_TEST_SECRET}"
+            [capture]
+            strategy = ["clipboard"]
+            maxInputChars = 40000
+            [[profiles]]
+            id = "local"
+            provider = "openai"
+            baseURL = "http://127.0.0.1:11434/v1"
+            model = "mock"
+            apiKey = "${env:CONSOLEPILOT_TEST_SECRET}"
+            maxContextBytes = 131072
+            [[actions]]
+            id = "summarize"
+            name = "Summarize"
+            profile = "local"
+            userPrompt = "请总结：{{input}}"
+            input = "prompt"
+            sessionMode = "dedicated"
+            maxContextBytes = 1024
+            """
+        try configText.write(to: url, atomically: true, encoding: .utf8)
+        let config = try ConfigStore(loader: ConfigLoader(configURL: url))
+        let database = try AppDatabase(path: directory.appendingPathComponent("db.sqlite").path)
+        let sessions = try SessionStore(database: database)
+        let coordinator = StreamCoordinator(sessionStore: sessions, usageStore: UsageStore(database: database))
+        let recorder = RecordingProvider()
+        let runner = ActionRunner(
+            config: config, capture: TextCaptureService(config: config.current.capture),
+            secrets: SecretResolver(), providers: [.openai: recorder],
+            coordinator: coordinator, sessionStore: sessions)
+        setenv("CONSOLEPILOT_TEST_SECRET", "test-value", 1)
+        defer { unsetenv("CONSOLEPILOT_TEST_SECRET") }
+        // 第一次触发写入远超 Action 级预算的历史；第二次触发应只发送裁剪后的上下文。
+        let bulky = String(repeating: "中文内容", count: 1000)
+        try await runner.run(actionId: "summarize", overrideInput: bulky)
+        try await runner.run(actionId: "summarize", overrideInput: "第二次")
+        let requests = recorder.requests
+        XCTAssertGreaterThanOrEqual(requests.count, 2)
+        let second = requests[requests.count - 1]
+        let bytes =
+            (second.systemPrompt?.utf8.count ?? 0)
+            + second.messages.reduce(0) { $0 + $1.content.utf8.count }
+        XCTAssertLessThanOrEqual(bytes, 1024)
+        XCTAssertFalse(second.messages.isEmpty)
+        // 最新一轮的 prompt 必须被保留（只裁剪更早的历史）。
+        XCTAssertEqual(second.messages.last?.content, "请总结：第二次")
+    }
+
+    @MainActor
     func testActionRunnerUsesSelectedTextTemplateAndCreatesSession() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ConsolepilotSelectionAction-\(UUID().uuidString)", isDirectory: true)
@@ -969,7 +1103,7 @@ final class InfrastructureTests: XCTestCase {
             "authToken", "maxBodyBytes",
             "strategy", "simulatedCopyWait", "restoreClipboard", "maxInputChars", "excludeBundleIds",
             "id", "provider", "baseURL", "model", "apiKey", "temperature", "maxTokens", "timeoutSec",
-            "priceInput", "priceOutput",
+            "maxContextBytes", "priceInput", "priceOutput",
             "name", "hotkey", "profile", "systemPrompt", "userPrompt", "input", "sessionMode",
             "autoShow", "notifyOnDone",
         ] {
@@ -998,5 +1132,25 @@ final class InfrastructureTests: XCTestCase {
             if !key.isEmpty { keys.insert(String(key)) }
         }
         return keys
+    }
+}
+
+/// 记录每次收到请求的 Provider（内部委托 Mock，便于断言请求构造）。
+private final class RecordingProvider: AIProvider, @unchecked Sendable {
+    private let inner = MockAIProvider(delay: .zero)
+    private let lock = NSLock()
+    private var recorded: [ChatRequest] = []
+
+    var requests: [ChatRequest] {
+        lock.lock()
+        defer { lock.unlock() }
+        return recorded
+    }
+
+    func stream(_ request: ChatRequest) -> AsyncThrowingStream<StreamEvent, Error> {
+        lock.lock()
+        recorded.append(request)
+        lock.unlock()
+        return inner.stream(request)
     }
 }

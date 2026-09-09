@@ -110,6 +110,12 @@ package struct ConfigValidator: Sendable {
                         code: .valueOutOfRange, line: nil,
                         message: "Action \(action.id) 的 timeoutSec 必须是正整数"))
             }
+            if let maxContextBytes = action.maxContextBytes, maxContextBytes < 1024 {
+                errors.append(
+                    ConfigIssue(
+                        code: .valueOutOfRange, line: nil,
+                        message: "Action \(action.id) 的 maxContextBytes 至少为 1024（1 KiB）"))
+            }
         }
 
         for profile in profiles {
@@ -125,7 +131,7 @@ package struct ConfigValidator: Sendable {
                     ConfigIssue(code: .unknownProvider, line: nil, message: "未知 provider：\(profile.provider.rawValue)"))
             }
             if !profile.temperature.isFinite || profile.temperature < 0 || profile.temperature > 2
-                || profile.maxTokens <= 0 || profile.timeoutSec <= 0
+                || profile.maxTokens <= 0 || profile.timeoutSec <= 0 || profile.maxContextBytes < 1024
             {
                 errors.append(ConfigIssue(code: .valueOutOfRange, line: nil, message: "Profile \(profile.id) 的参数超出范围"))
             }

@@ -101,9 +101,20 @@ package final class ActionRunner {
         let history = sessionStore.history(sessionId: session.id)
             .filter { $0.role == .user || $0.role == .assistant }
             .map { ChatMessage(role: $0.role, content: $0.content) }
+        // 上下文字节预算：Action 级 maxContextBytes 覆盖 Profile 级，未设置回退。
+        // 裁剪只作用于本次请求副本，落库历史保持完整（重复触发结果确定）。
+        let contextBudget = action.maxContextBytes ?? profile.maxContextBytes
+        let trimmed = ContextTrim.trim(
+            systemPrompt: action.systemPrompt, messages: history, budgetBytes: contextBudget)
+        if trimmed.droppedCount > 0 || trimmed.truncated {
+            Log.debug(
+                "Action 上下文裁剪：action=\(action.id) 丢弃历史 \(trimmed.droppedCount) 条"
+                    + "，截断最新=\(trimmed.truncated)，预算=\(contextBudget) 字节",
+                category: .domain)
+        }
         let request = ChatRequest(
             profile: profile, apiKey: apiKey, systemPrompt: action.systemPrompt,
-            messages: history,
+            messages: trimmed.messages,
             overrides: mergedOverrides(for: action))
         let events = provider.stream(request)
         await coordinator.consume(events, into: session.id)

@@ -1106,8 +1106,17 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
                 return
             }
         }
+        // 上下文按 Profile 级 maxContextBytes 裁剪（仅请求副本，落库历史不变）。
+        let trimmed = ContextTrim.trim(
+            systemPrompt: nil, messages: history, budgetBytes: profile.maxContextBytes)
+        if trimmed.droppedCount > 0 || trimmed.truncated {
+            Log.debug(
+                "聊天上下文裁剪：profile=\(profile.id) 丢弃历史 \(trimmed.droppedCount) 条"
+                    + "，截断最新=\(trimmed.truncated)，预算=\(profile.maxContextBytes) 字节",
+                category: .domain)
+        }
         let request = ChatRequest(
-            profile: profile, apiKey: apiKey, systemPrompt: nil, messages: history, overrides: nil)
+            profile: profile, apiKey: apiKey, systemPrompt: nil, messages: trimmed.messages, overrides: nil)
         let sessionId = session.id
         requestTasks[sessionId] = Task { @MainActor [weak self] in
             guard let self else { return }

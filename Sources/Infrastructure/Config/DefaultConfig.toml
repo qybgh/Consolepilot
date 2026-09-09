@@ -51,6 +51,7 @@ excludeBundleIds = ["com.apple.keychainaccess", "com.agilebits.onepassword7"]
 # temperature = 0.3                        # 采样温度（0–2）
 # maxTokens = 4096                         # 单次回复最大 token 数
 # timeoutSec = 120                         # 请求超时（秒），Action 可单独覆盖
+# maxContextBytes = 131072                 # 上下文输入上限（字节，约 128 KiB）
 # priceInput = 0.005                       # 每 1K 输入 token 价格（用量统计用）
 # priceOutput = 0.015                      # 每 1K 输出 token 价格（用量统计用）
 
@@ -68,6 +69,7 @@ excludeBundleIds = ["com.apple.keychainaccess", "com.agilebits.onepassword7"]
 # input = "selection"
 # sessionMode = "dedicated"                # 独立后台会话（当前唯一支持）
 # timeoutSec = 60                          # 可选：覆盖该 Profile 的 timeoutSec
+# maxContextBytes = 65536                  # 可选：覆盖 Profile 级上下文上限
 # autoShow = true                          # 完成后显示主窗口（不抢焦点）
 # notifyOnDone = true                      # 后台完成/失败时发送本地通知
 # [actions.overrides]                      # 可选：本次请求参数覆盖（model/temperature/maxTokens）

@@ -89,12 +89,16 @@ public struct Profile: Sendable, Equatable, Identifiable {
     public let temperature: Double
     public let maxTokens: Int
     public let timeoutSec: Int
+    /// 单次请求携带的上下文输入上限（UTF-8 字节，含 system 提示与消息正文）。
+    /// 超出后先丢弃最早整条历史，仍超再在字符边界截断最新一条；默认 131072（128 KiB）。
+    public let maxContextBytes: Int
     public let priceInput: Double?
     public let priceOutput: Double?
 
     public init(
         id: String, provider: ProviderKind, baseURL: URL, model: String, apiKeyRef: String,
-        temperature: Double, maxTokens: Int, timeoutSec: Int, priceInput: Double?, priceOutput: Double?
+        temperature: Double, maxTokens: Int, timeoutSec: Int, maxContextBytes: Int = 131_072,
+        priceInput: Double?, priceOutput: Double?
     ) {
         self.id = id
         self.provider = provider
@@ -104,6 +108,7 @@ public struct Profile: Sendable, Equatable, Identifiable {
         self.temperature = temperature
         self.maxTokens = maxTokens
         self.timeoutSec = timeoutSec
+        self.maxContextBytes = maxContextBytes
         self.priceInput = priceInput
         self.priceOutput = priceOutput
     }
@@ -121,6 +126,8 @@ public struct Action: Sendable, Equatable, Identifiable {
     public let sessionMode: SessionMode
     /// Action 级请求超时（秒）；显式设置时覆盖 profile.timeoutSec，未设置回退 profile。
     public let timeoutSec: Int?
+    /// Action 级上下文上限（UTF-8 字节）；显式设置时覆盖 profile.maxContextBytes，未设置回退 profile。
+    public let maxContextBytes: Int?
     public let autoShow: Bool
     public let notifyOnDone: Bool
     public let overrides: ParamOverrides?
@@ -128,7 +135,7 @@ public struct Action: Sendable, Equatable, Identifiable {
     public init(
         id: String, name: String, hotkey: String?, profileId: String, systemPrompt: String?,
         userPrompt: String, input: InputSource, sessionMode: SessionMode, timeoutSec: Int?,
-        autoShow: Bool, notifyOnDone: Bool, overrides: ParamOverrides?
+        maxContextBytes: Int? = nil, autoShow: Bool, notifyOnDone: Bool, overrides: ParamOverrides?
     ) {
         self.id = id
         self.name = name
@@ -139,6 +146,7 @@ public struct Action: Sendable, Equatable, Identifiable {
         self.input = input
         self.sessionMode = sessionMode
         self.timeoutSec = timeoutSec
+        self.maxContextBytes = maxContextBytes
         self.autoShow = autoShow
         self.notifyOnDone = notifyOnDone
         self.overrides = overrides

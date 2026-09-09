@@ -337,7 +337,8 @@ private struct RawCapture: Decodable {
 
 private struct RawProfile: Decodable {
     private enum CodingKeys: String, CodingKey {
-        case id, provider, baseURL, model, apiKey, temperature, maxTokens, timeoutSec, priceInput, priceOutput
+        case id, provider, baseURL, model, apiKey, temperature, maxTokens, timeoutSec, maxContextBytes,
+            priceInput, priceOutput
     }
     let id: String
     let provider: String
@@ -347,6 +348,7 @@ private struct RawProfile: Decodable {
     var temperature = 0.3
     var maxTokens = 4096
     var timeoutSec = 120
+    var maxContextBytes = 131_072
     var priceInput: Double?
     var priceOutput: Double?
 
@@ -360,6 +362,7 @@ private struct RawProfile: Decodable {
         temperature = try values.decodeIfPresent(Double.self, forKey: .temperature) ?? 0.3
         maxTokens = try values.decodeIfPresent(Int.self, forKey: .maxTokens) ?? 4096
         timeoutSec = try values.decodeIfPresent(Int.self, forKey: .timeoutSec) ?? 120
+        maxContextBytes = try values.decodeIfPresent(Int.self, forKey: .maxContextBytes) ?? 131_072
         priceInput = try values.decodeIfPresent(Double.self, forKey: .priceInput)
         priceOutput = try values.decodeIfPresent(Double.self, forKey: .priceOutput)
     }
@@ -371,14 +374,14 @@ private struct RawProfile: Decodable {
         return Profile(
             id: id, provider: provider, baseURL: url, model: model, apiKeyRef: apiKey,
             temperature: temperature, maxTokens: maxTokens, timeoutSec: timeoutSec,
-            priceInput: priceInput, priceOutput: priceOutput)
+            maxContextBytes: maxContextBytes, priceInput: priceInput, priceOutput: priceOutput)
     }
 }
 
 private struct RawAction: Decodable {
     private enum CodingKeys: String, CodingKey {
-        case id, name, hotkey, profile, systemPrompt, userPrompt, input, sessionMode, timeoutSec, autoShow,
-            notifyOnDone, overrides
+        case id, name, hotkey, profile, systemPrompt, userPrompt, input, sessionMode, timeoutSec,
+            maxContextBytes, autoShow, notifyOnDone, overrides
     }
     let id: String
     let name: String
@@ -389,6 +392,7 @@ private struct RawAction: Decodable {
     var input: String = "selection"
     var sessionMode = "dedicated"
     var timeoutSec: Int?
+    var maxContextBytes: Int?
     var autoShow = true
     var notifyOnDone = false
     var overrides: RawOverrides?
@@ -404,6 +408,7 @@ private struct RawAction: Decodable {
         input = try values.decodeIfPresent(String.self, forKey: .input) ?? "selection"
         sessionMode = try values.decodeIfPresent(String.self, forKey: .sessionMode) ?? "dedicated"
         timeoutSec = try values.decodeIfPresent(Int.self, forKey: .timeoutSec)
+        maxContextBytes = try values.decodeIfPresent(Int.self, forKey: .maxContextBytes)
         autoShow = try values.decodeIfPresent(Bool.self, forKey: .autoShow) ?? true
         notifyOnDone = try values.decodeIfPresent(Bool.self, forKey: .notifyOnDone) ?? false
         overrides = try values.decodeIfPresent(RawOverrides.self, forKey: .overrides)
@@ -419,7 +424,8 @@ private struct RawAction: Decodable {
         return Action(
             id: id, name: name, hotkey: hotkey, profileId: profile, systemPrompt: systemPrompt,
             userPrompt: userPrompt, input: input, sessionMode: sessionMode, timeoutSec: timeoutSec,
-            autoShow: autoShow, notifyOnDone: notifyOnDone, overrides: overrides?.makeConfig())
+            maxContextBytes: maxContextBytes, autoShow: autoShow, notifyOnDone: notifyOnDone,
+            overrides: overrides?.makeConfig())
     }
 }
 
