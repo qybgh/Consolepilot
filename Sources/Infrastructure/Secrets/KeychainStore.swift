@@ -107,17 +107,6 @@ public struct KeychainStore {
         return SecItemCopyMatching(query as CFDictionary, nil) == errSecSuccess
     }
 
-    func deleteAll() throws {
-        let query: [CFString: Any] = [
-            kSecClass: kSecClassGenericPassword,
-            kSecAttrService: service,
-        ]
-        let status = SecItemDelete(query as CFDictionary)
-        guard status == errSecSuccess || status == errSecItemNotFound else { throw KeychainError(status: status) }
-        Self.cache.lock.lock()
-        Self.cache.values.removeAll()
-        Self.cache.lock.unlock()
-    }
 }
 
 struct KeychainError: Error, Equatable, Sendable {

@@ -163,23 +163,6 @@ package final class SessionStore {
         }
     }
 
-    func search(_ query: String) -> [Message] {
-        guard !query.isEmpty else { return [] }
-        let escaped = query.replacingOccurrences(of: "%", with: "\\%")
-        do {
-            return try database.writer.read { db in
-                try MessageRecord
-                    .filter(Column("content").like("%\(escaped)%"))
-                    .order(Column("created_at").desc)
-                    .fetchAll(db)
-                    .map(\.entity)
-            }
-        } catch {
-            Log.error("搜索消息失败：\(error)", category: .domain)
-            return []
-        }
-    }
-
     package func session(id: String) -> Session? {
         sessions.first { $0.id == id }
     }
