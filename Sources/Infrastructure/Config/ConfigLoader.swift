@@ -1,6 +1,32 @@
 import Foundation
 import TOMLDecoder
 
+// MARK: - 默认配置资源定位（Xcode 资源阶段适配）
+
+extension ConfigLoader {
+    /// 返回随 App/CLI/测试 bundle 分发的 `DefaultConfig.toml`。
+    /// 优先 Bundle.main，其次按 bundle identifier 探测 ConsolepilotCore 资源，
+    /// 最后扫描已加载 bundle 作为兜底（适配 Xcode 下 host/test 不同装载形态）。
+    static func bundledDefaultConfigURL() -> URL? {
+        #if SWIFT_PACKAGE
+            // SwiftPM 合成的 Bundle.module（测试与开发基线使用）。
+            return Bundle.module.url(forResource: "DefaultConfig", withExtension: "toml")
+        #else
+            // Xcode 工程：默认配置随 App/CLI/测试 bundle 分发，逐级探测。
+            let candidates: [Bundle?] = [.main, Bundle(identifier: "com.consolepilot.ConsolepilotCore")]
+            for bundle in candidates {
+                if let url = bundle?.url(forResource: "DefaultConfig", withExtension: "toml") {
+                    return url
+                }
+            }
+            let probe = (Bundle.allBundles + Bundle.allFrameworks).first { bundle in
+                bundle.url(forResource: "DefaultConfig", withExtension: "toml") != nil
+            }
+            return probe?.url(forResource: "DefaultConfig", withExtension: "toml")
+        #endif
+    }
+}
+
 struct ConfigLoader {
     let fileManager: FileManager
     private let explicitURL: URL?
@@ -23,7 +49,7 @@ struct ConfigLoader {
         if fileManager.fileExists(atPath: fallback.path) { return fallback }
         try fileManager.createDirectory(at: primary.deletingLastPathComponent(), withIntermediateDirectories: true)
         let template =
-            Bundle.module.url(forResource: "DefaultConfig", withExtension: "toml")
+            ConfigLoader.bundledDefaultConfigURL()
             .flatMap { try? String(contentsOf: $0, encoding: .utf8) } ?? ""
         try template.write(to: primary, atomically: true, encoding: .utf8)
         return primary
@@ -34,7 +60,9 @@ struct ConfigLoader {
             // NSTextView.string may be an NSString-backed bridged String.
             // TOMLDecoder 0.3 force-unwraps contiguous UTF-8 storage, so
             // normalize the input before handing it to the decoder.
-            let normalized = String(decoding: text.utf8, as: UTF8.self)
+            guard let normalized = String(bytes: Array(text.utf8), encoding: .utf8) else {
+                throw ConfigError.invalid("配置文本不是有效 UTF-8")
+            }
             try Self.preflightNumericFields(in: normalized)
             let document = try TOMLDecoder().decode(RawConfig.self, from: normalized)
             return try document.makeConfig()
@@ -48,17 +76,18 @@ struct ConfigLoader {
     private static func userFacingParseError(_ error: Error) -> String {
         let description: String
         if case DecodingError.dataCorrupted(let context) = error,
-           let underlying = context.underlyingError {
+            let underlying = context.underlyingError
+        {
             description = String(describing: underlying)
         } else {
             description = String(describing: error)
         }
         let pattern = #"Line\s+(\d+).*?Syntax error:\s*(.*)"#
         if let regex = try? NSRegularExpression(pattern: pattern),
-           let match = regex.firstMatch(
-               in: description, range: NSRange(description.startIndex..., in: description)),
-           let lineRange = Range(match.range(at: 1), in: description),
-           let messageRange = Range(match.range(at: 2), in: description)
+            let match = regex.firstMatch(
+                in: description, range: NSRange(description.startIndex..., in: description)),
+            let lineRange = Range(match.range(at: 1), in: description),
+            let messageRange = Range(match.range(at: 2), in: description)
         {
             let line = description[lineRange]
             let rawMessage = String(description[messageRange])
@@ -88,7 +117,9 @@ struct ConfigLoader {
             guard !line.hasPrefix("#"), let equals = line.firstIndex(of: "=") else { continue }
             let key = line[..<equals].trimmingCharacters(in: .whitespaces)
             guard integerKeys.contains(String(key)) else { continue }
-            let value = line[line.index(after: equals)...].split(separator: "#", maxSplits: 1, omittingEmptySubsequences: true).first?
+            let value =
+                line[line.index(after: equals)...].split(separator: "#", maxSplits: 1, omittingEmptySubsequences: true)
+                .first?
                 .trimmingCharacters(in: .whitespaces) ?? ""
             guard Int(value) != nil else {
                 throw ConfigError.invalid("配置项 \(key) 必须是整数")

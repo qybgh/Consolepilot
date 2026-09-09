@@ -19,13 +19,13 @@ final class InfrastructureTests: XCTestCase {
                 Profile(
                     id: "local", provider: .openai, baseURL: URL(string: "http://127.0.0.1:11434/v1")!,
                     model: "test", apiKeyRef: "", temperature: 0.3, maxTokens: 100, timeoutSec: 30,
-                    priceInput: nil, priceOutput: nil),
+                    priceInput: nil, priceOutput: nil)
             ],
             actions: [
                 Action(
                     id: "ask", name: "Ask", hotkey: nil, profileId: "local", systemPrompt: nil,
                     userPrompt: "{{input}}", input: .prompt, attachTo: .newSession, autoShow: true,
-                    notifyOnDone: false, overrides: nil),
+                    notifyOnDone: false, overrides: nil)
             ],
             tails: [])
     }
@@ -34,8 +34,11 @@ final class InfrastructureTests: XCTestCase {
         ConfigValidator().validate(config, sourceText: "")
     }
 
-    private func assertError(_ code: ConfigErrorCode, in config: AppConfig, file: StaticString = #filePath, line: UInt = #line) {
-        XCTAssertTrue(report(for: config).errors.contains { $0.code == code }, "missing \(code)", file: file, line: line)
+    private func assertError(
+        _ code: ConfigErrorCode, in config: AppConfig, file: StaticString = #filePath, line: UInt = #line
+    ) {
+        XCTAssertTrue(
+            report(for: config).errors.contains { $0.code == code }, "missing \(code)", file: file, line: line)
     }
 
     func testConfigValidatorCoversCoreValueAndReferenceRules() {
@@ -48,7 +51,9 @@ final class InfrastructureTests: XCTestCase {
             compactFontSize: 11, scrollbackLines: 1, launchAtLogin: false, toggleHotkey: "bad")
         let capture = CaptureConfig(
             strategy: [], simulatedCopyWait: .zero, restoreClipboard: true, maxInputChars: 1, excludeBundleIds: [])
-        let config = AppConfig(general: general, server: ServerConfig(authTokenRef: "plain", maxBodyBytes: 1), capture: capture, profiles: [profile], actions: base.actions, tails: [])
+        let config = AppConfig(
+            general: general, server: ServerConfig(authTokenRef: "plain", maxBodyBytes: 1), capture: capture,
+            profiles: [profile], actions: base.actions, tails: [])
         assertError(.invalidBaseURL, in: config)
         assertError(.valueOutOfRange, in: config)
         assertError(.invalidHotkeySyntax, in: config)
@@ -57,7 +62,8 @@ final class InfrastructureTests: XCTestCase {
         assertError(.invalidServerAuth, in: config)
         let remote = Profile(
             id: "remote", provider: .openai, baseURL: URL(string: "https://example.com/v1")!, model: "test",
-            apiKeyRef: "plain-secret", temperature: 0.3, maxTokens: 100, timeoutSec: 30, priceInput: nil, priceOutput: nil)
+            apiKeyRef: "plain-secret", temperature: 0.3, maxTokens: 100, timeoutSec: 30, priceInput: nil,
+            priceOutput: nil)
         let remoteConfig = AppConfig(
             general: validConfig().general, server: validConfig().server, capture: validConfig().capture,
             profiles: [remote], actions: [], tails: [])
@@ -66,15 +72,19 @@ final class InfrastructureTests: XCTestCase {
 
     func testConfigValidatorDetectsDuplicatesUnknownReferencesAndTemplateErrors() {
         let base = validConfig()
-        let actions = [Action(
-            id: "ask", name: "Ask", hotkey: "cmd+k", profileId: "missing", systemPrompt: "{{unknown}}",
-            userPrompt: "{{input}}", input: .prompt, attachTo: .newSession, autoShow: true,
-            notifyOnDone: false, overrides: nil),
+        let actions = [
+            Action(
+                id: "ask", name: "Ask", hotkey: "cmd+k", profileId: "missing", systemPrompt: "{{unknown}}",
+                userPrompt: "{{input}}", input: .prompt, attachTo: .newSession, autoShow: true,
+                notifyOnDone: false, overrides: nil),
             Action(
                 id: "ask", name: "Ask 2", hotkey: "cmd+k", profileId: "local", systemPrompt: nil,
                 userPrompt: "{{input}}", input: .prompt, attachTo: .newSession, autoShow: true,
-                notifyOnDone: false, overrides: nil)]
-        let config = AppConfig(general: base.general, server: base.server, capture: base.capture, profiles: [base.profiles[0], base.profiles[0]], actions: actions, tails: [])
+                notifyOnDone: false, overrides: nil),
+        ]
+        let config = AppConfig(
+            general: base.general, server: base.server, capture: base.capture,
+            profiles: [base.profiles[0], base.profiles[0]], actions: actions, tails: [])
         let codes = Set(report(for: config).errors.map(\.code))
         XCTAssertTrue(codes.contains(.duplicateProfileId))
         XCTAssertTrue(codes.contains(.duplicateActionId))
@@ -89,21 +99,25 @@ final class InfrastructureTests: XCTestCase {
             id: "ask", name: "Ask", hotkey: nil, profileId: "local", systemPrompt: nil,
             userPrompt: "{{selection}}", input: .selection, attachTo: .newSession, autoShow: true,
             notifyOnDone: false, overrides: nil)
-        let config = AppConfig(general: base.general, server: base.server, capture: base.capture, profiles: base.profiles, actions: [action], tails: [])
+        let config = AppConfig(
+            general: base.general, server: base.server, capture: base.capture, profiles: base.profiles,
+            actions: [action], tails: [])
         let report = ConfigValidator(hasAccessibility: false).validate(config, sourceText: "")
         XCTAssertTrue(report.errors.isEmpty)
         XCTAssertTrue(report.warnings.contains { $0.code == .warnNoAXPermission })
     }
 
     func testConfigLoaderRejectsUnknownEnumValues() {
-        XCTAssertThrowsError(try ConfigLoader().parse("""
-            [[profiles]]
-            id = "x"
-            provider = "unknown"
-            baseURL = "http://127.0.0.1"
-            model = "x"
-            apiKey = ""
-            """))
+        XCTAssertThrowsError(
+            try ConfigLoader().parse(
+                """
+                [[profiles]]
+                id = "x"
+                provider = "unknown"
+                baseURL = "http://127.0.0.1"
+                model = "x"
+                apiKey = ""
+                """))
     }
 
     func testConfigLoaderParsesNativeIntegerAfterEditorStyleRoundTrip() throws {
@@ -128,23 +142,26 @@ final class InfrastructureTests: XCTestCase {
     }
 
     func testConfigLoaderRejectsMalformedIntegerBeforeTOMLDecoder() {
-        XCTAssertThrowsError(try ConfigLoader().parse("""
-            [general]
-            port =
-            """)) { error in
+        XCTAssertThrowsError(
+            try ConfigLoader().parse(
+                """
+                [general]
+                port =
+                """)
+        ) { error in
             XCTAssertTrue(String(describing: error).contains("必须是整数"))
         }
     }
 
     func testConfigLoaderReportsConciseMultilineStringError() {
         let text = """
-        [[actions]]
-        id = "demo"
-        name = "Demo"
-        profile = "local"
-        systemPrompt = \"\"\"
-        未闭合内容
-        """
+            [[actions]]
+            id = "demo"
+            name = "Demo"
+            profile = "local"
+            systemPrompt = \"\"\"
+            未闭合内容
+            """
         do {
             _ = try ConfigLoader().parse(text)
             XCTFail("expected malformed TOML")
@@ -245,7 +262,7 @@ final class InfrastructureTests: XCTestCase {
     }
 
     func testDefaultConfigurationPassesCoreValidation() throws {
-        let url = Bundle.module.url(forResource: "DefaultConfig", withExtension: "toml")
+        let url = ConfigLoader.bundledDefaultConfigURL()
         let text = try XCTUnwrap(url).flatMap { try? String(contentsOf: $0, encoding: .utf8) }
         let config = try ConfigLoader().parse(try XCTUnwrap(text))
         let report = ConfigValidator().validate(config, sourceText: try XCTUnwrap(text))

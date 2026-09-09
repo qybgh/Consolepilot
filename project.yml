@@ -1,0 +1,133 @@
+name: Consolepilot
+options:
+  bundleIdPrefix: com.consolepilot
+  deploymentTarget:
+    macOS: "14.0"
+  groupSortPosition: top
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+configs:
+  Debug: debug
+  Release: release
+configFiles:
+  Debug: Configs/Debug.xcconfig
+  Release: Configs/Release.xcconfig
+packages:
+  GRDB:
+    url: https://github.com/groue/GRDB.swift.git
+    exactVersion: 7.8.0
+  TOMLDecoder:
+    url: https://github.com/dduan/TOMLDecoder.git
+    exactVersion: 0.4.5
+targets:
+  ConsolepilotCore:
+    type: framework
+    platform: macOS
+    productName: ConsolepilotCore
+    deploymentTarget: "14.0"
+    sources:
+      - path: Sources/Domain
+      - path: Sources/Infrastructure
+      - path: Sources/Rendering
+      - path: Sources/Transport
+      - path: Sources/Infrastructure/Config/DefaultConfig.toml
+        buildPhase: resources
+    dependencies:
+      - package: GRDB
+      - package: TOMLDecoder
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.consolepilot.ConsolepilotCore
+        SKIP_INSTALL: YES
+        DYLIB_INSTALL_NAME_BASE: "@rpath"
+        MACH_O_TYPE: staticlib
+        SWIFT_EMIT_LOC_STRINGS: NO
+  Consolepilot:
+    type: application
+    platform: macOS
+    productName: Consolepilot
+    deploymentTarget: "14.0"
+    sources:
+      - path: Sources/App
+      - path: Sources/Infrastructure/Config/DefaultConfig.toml
+        buildPhase: resources
+    dependencies:
+      - target: ConsolepilotCore
+      - package: GRDB
+      - package: TOMLDecoder
+    info:
+      path: Resources/Info.plist
+    entitlements:
+      path: Resources/Consolepilot.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.consolepilot.Consolepilot
+        PRODUCT_NAME: Consolepilot
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Resources/Consolepilot.entitlements
+        ENABLE_HARDENED_RUNTIME: NO
+        SWIFT_EMIT_LOC_STRINGS: NO
+  ConsolepilotCLI:
+    type: tool
+    platform: macOS
+    productName: consolepilot
+    deploymentTarget: "14.0"
+    sources:
+      - path: Sources/CLI
+      - path: Sources/Infrastructure/Config/DefaultConfig.toml
+        buildPhase: resources
+    dependencies:
+      - target: ConsolepilotCore
+      - package: GRDB
+      - package: TOMLDecoder
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.consolepilot.consolepilot
+        PRODUCT_NAME: consolepilot
+        SKIP_INSTALL: NO
+        SWIFT_EMIT_LOC_STRINGS: NO
+  ConsolepilotTests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: Tests
+      - path: Sources/Infrastructure/Config/DefaultConfig.toml
+        buildPhase: resources
+    dependencies:
+      - target: Consolepilot
+      - target: ConsolepilotCore
+      - package: GRDB
+      - package: TOMLDecoder
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.consolepilot.ConsolepilotTests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Consolepilot.app/Contents/MacOS/Consolepilot"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        SWIFT_EMIT_LOC_STRINGS: NO
+schemes:
+  Consolepilot:
+    build:
+      targets:
+        Consolepilot: all
+        ConsolepilotCLI: all
+        ConsolepilotTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      gatherCoverageData: false
+      targets:
+        - ConsolepilotTests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release

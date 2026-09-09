@@ -1,0 +1,24 @@
+{
+  "originHash" : "bb1a07260d39a5e9245a9680f172a47960d2092f058731b53ffb005e8b7a9dc8",
+  "pins" : [
+    {
+      "identity" : "grdb.swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/groue/GRDB.swift.git",
+      "state" : {
+        "revision" : "18497b68fdbb3a09528d260a0a0e1e7e61c8c53d",
+        "version" : "7.8.0"
+      }
+    },
+    {
+      "identity" : "tomldecoder",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/dduan/TOMLDecoder.git",
+      "state" : {
+        "revision" : "a2bbd2796fe3064e107de18cb56031052c4fa899",
+        "version" : "0.4.5"
+      }
+    }
+  ],
+  "version" : 3
+}

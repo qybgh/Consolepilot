@@ -19,3 +19,5 @@ config.toml
 
 # Xcode user state
 xcuserdata/
+# Xcode derived data (make build/test)
+build/
