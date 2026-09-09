@@ -294,6 +294,14 @@
 - 门禁：**108 项全绿**；`make lint` 全绿（含新增残留扫描）；`make build` Debug/Release 通过；`make release VERSION=0.2.0-p1` 产物见 dist/。
 - **P1 DoD 判定**：PLAN §4 P1 完成条件逐条满足（8-target 依赖方向零违规、领域纯净、Repository/流/Provider/Action 契约全绿、删除项零残留、配置语义按 D6/D7）。按计划暂停，待你在 macOS 14 执行实机验收（清单见 `Docs/ACCEPTANCE-P1-MACOS14.md`，产物见 dist/）；真实 Provider 动网子集待你提供低权限测试凭据后补跑。
 
+### 本机验收反馈修复（真实 Provider 状态如实显示，2026-09-09）
+
+- 提交：`772b429 fix: derive status and welcome text from actual provider mode, not hardcoded mock`。
+- 问题：配置残留 + 真实 Provider 已启用时，首会话欢迎横幅仍无条件显示“Consolepilot Mock 验收模式已启动 / 不会消耗 API Token”，流式期间状态栏也恒为“Mock 正在流式生成”——与实际（allowRealProvider=true + 远程 Profile → 访问真实 API）矛盾。
+- 修复：新增 `isLocalMockMode()`（回环地址恒为本地 Mock；远程 Profile 仅 `allowRealProvider=true` 时走真实 API，与 provider 选择逻辑一致）与 `streamingStatusText()`；欢迎语按实际模式生成——本地 Mock 时如实说明不访问真实 API，真实 Provider 时显示 Profile/model 并提示核对密钥与用量；流式状态在真实 Provider 时不再标注 Mock；`configureMockRuntime` 更名 `configureRuntime`，去掉遗留的 `CONSOLEPILOT_ENABLE_REAL_PROVIDER` 陈旧注释。
+- 门禁：**116 项全绿**（连续 3 轮复跑无偶发）；`make lint` 全绿；最新产物 SHA `a5b62fad…`（Apple Development 签名，Team `3CSL8ZN3AN`），消费者侧校验通过。
+- 卸载语义说明：macOS“移到废纸篓”只删除 App 本体，不会清理 `~/.config/consolepilot`、`~/Library/Application Support/Consolepilot` 等数据；需要“卸载后重装 = 首次安装”请运行 `./uninstall.sh`（`--yes` 直删 / `--dry-run` 预览），残留清单与规范见 `Docs/UNINSTALL.md`。
+
 ### P1 追加 §6.2 稳定性/性能门禁（2026-09-09）
 
 - 提交：`06ff894 test: add P1 stability/perf gates and surface silent store failures (P1 acceptance)`。
