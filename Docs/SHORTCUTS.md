@@ -27,7 +27,7 @@
 
 ## 全局快捷键
 
-Consolepilot 使用 Carbon 注册配置中的 Action 快捷键；未配置快捷键时不会注册任何组合键。Action 触发后会在原前台 App 中静默模拟一次 `⌘C`（仅用于读取选区），然后恢复剪贴板，不激活或抢占 Consolepilot 主屏窗口。`general.toggleHotkey` 仍用于呼出/隐藏窗口，留空表示关闭。Action 捕获选区仍需要辅助功能权限。
+Consolepilot 使用 Carbon 注册配置中的 Action 快捷键；未配置快捷键时不会注册任何组合键。Action 触发后会在原前台 App 中静默模拟一次 `⌘C`（仅用于读取选区），然后恢复剪贴板，不激活或抢占 Consolepilot 主屏窗口。窗口呼出使用 Dock、菜单栏图标或 App 菜单快捷键（`⌘0`/`⌘,`）；原 `general.toggleHotkey` 全局呼出热键已随本轮删除。Action 捕获选区仍需要辅助功能权限。
 
 Action 支持双击快捷键语法，例如 `hotkey = "cmd+c*2"` 表示在约 420 毫秒内连续按两次 `Command+C` 才触发；Consolepilot 会将按键转发给原前台 App，因此其它 App 的普通复制仍然有效；当 Consolepilot 自身位于前台时则直接调用标准复制响应链。第二次按键完成后才执行 Action，捕获选区时还会确认剪贴板变化并恢复原内容。普通单击快捷键不带 `*2`，例如 `cmd+shift+k`。
 
