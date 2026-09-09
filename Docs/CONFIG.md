@@ -15,7 +15,7 @@
 
 `[general]` 控制本地端口、主题/字体/透明度/置顶等显示参数（解析与校验已保留，界面接线随 P2 SwiftUI 迁移实现）、滚动缓冲行数与真实 Provider 开关；`[server]` 控制鉴权 token 引用及最大请求体；`[capture]` 控制文本捕获策略、剪贴板恢复和长度限制。
 
-`[[profiles]]` 定义 Provider、Base URL、模型、密钥引用、生成参数和价格；`[[actions]]` 定义 Action 的提示词、输入来源、会话策略（`sessionMode`）、快捷键、超时与通知。日志尾随（`tails`）以及 `launchAtLogin`、`toggleHotkey`、`attachTo` 已按 D6/D7 决策移出本轮 schema，配置中出现旧字段会报明确错误，不再静默忽略。
+`[[profiles]]` 定义 Provider、Base URL、模型、密钥引用、生成参数和价格；`[[actions]]` 定义 Action 的提示词、输入来源、会话策略（`sessionMode`）、快捷键、超时与通知。日志尾随（`tails`）以及 `launchAtLogin`、`toggleHotkey`、`attachTo` 已按 D6/D7 决策移出本轮 schema：旧 `attachTo` 残留会报含行号的迁移错误；`launchAtLogin`/`toggleHotkey`/`tails` 残留会被忽略（已无对应功能），建议在设置中删除相应行与示例注释。默认配置与设置编辑器只显示配置本身（每项至多一行注释、不含示例块），完整示例见本文档。
 
 `[server].authToken` 是可选的本地 CLI/HTTP 接口鉴权配置；留空即可关闭本地服务，不影响 App 内对话和真实 Provider。远程 Profile 的 API Key 会在 App 首次打开时预读取，以便一次性完成钥匙串授权。
 

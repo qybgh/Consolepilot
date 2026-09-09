@@ -61,8 +61,6 @@ final class SettingsEditorView: NSView, NSTextViewDelegate {
     private var configURL: URL?
     private var isDirty = false
     private var isLoading = false
-    private let referenceMarker = "# --- Consolepilot 高级配置参考（可复制后取消注释） ---"
-
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         wantsLayer = true
@@ -277,10 +275,7 @@ final class SettingsEditorView: NSView, NSTextViewDelegate {
         do {
             let url = try LocalServerClientConfiguration.resolveURL()
             configURL = url
-            var content = try String(contentsOf: url, encoding: .utf8)
-            if !content.contains(referenceMarker) {
-                content += "\n\n" + advancedReference
-            }
+            let content = try String(contentsOf: url, encoding: .utf8)
             textView.string = content
             isDirty = false
             statusLabel.stringValue = "当前配置：\(url.path)"
@@ -325,42 +320,5 @@ final class SettingsEditorView: NSView, NSTextViewDelegate {
         saveButton.isEnabled = isDirty
         discardButton.isEnabled = isDirty
         reloadButton.isEnabled = !isDirty
-    }
-
-    private var advancedReference: String {
-        """
-        \(referenceMarker)
-        # Profile：每个 [[profiles]] 至少需要 id、provider、baseURL、model、apiKey。
-        # provider 可选 openai / anthropic；远程 apiKey 必须使用 ${keychain:name} 或 ${env:VAR}。
-        # [[profiles]]
-        # id = "openai"
-        # provider = "openai"
-        # baseURL = "https://api.openai.com/v1"
-        # model = "gpt-4o-mini"
-        # apiKey = "${keychain:openai}"
-        # temperature = 0.3
-        # maxTokens = 4096
-        # timeoutSec = 120
-        # priceInput = 0.0
-        # priceOutput = 0.0
-
-        # Action：提示词中的 {{input}} 会替换为捕获或命令输入。
-        # [[actions]]
-        # id = "summarize"
-        # name = "总结选中文本"
-        # hotkey = "cmd+shift+s"
-        # profile = "openai"
-        # systemPrompt = "你是一个简洁的助手。"
-        # userPrompt = "请总结以下内容：{{input}}"
-        # input = "selection"
-        # sessionMode = "dedicated"
-        # timeoutSec = 120
-        # autoShow = true
-        # notifyOnDone = false
-        # [actions.overrides]
-        # temperature = 0.2
-        # maxTokens = 1200
-        # model = "gpt-4o-mini"
-        """
     }
 }

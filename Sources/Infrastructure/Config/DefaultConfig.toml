@@ -37,35 +37,3 @@ restoreClipboard = true
 maxInputChars = 40000
 # 不触发捕获的应用 Bundle ID
 excludeBundleIds = ["com.apple.keychainaccess", "com.agilebits.onepassword7"]
-
-# ---------------- Profile 示例 ----------------
-# 取消下面注释即可配置 Provider。远程 Profile 的 apiKey 必须是安全引用。
-# [[profiles]]
-# id = "openai"
-# provider = "openai"              # openai 或 anthropic
-# baseURL = "https://api.openai.com/v1"
-# model = "gpt-4o-mini"
-# apiKey = "${keychain:openai}"
-# temperature = 0.3
-# maxTokens = 4096
-# timeoutSec = 120
-# priceInput = 0.0                  # 可选：每百万输入 Token 价格
-# priceOutput = 0.0                 # 可选：每百万输出 Token 价格
-
-# ---------------- Action 示例 ----------------
-# [[actions]]
-# id = "summarize"
-# name = "总结选中文本"
-# hotkey = "cmd+shift+s"            # 可选；需授权全局快捷键
-# profile = "openai"
-# systemPrompt = "你是一个简洁的助手。" # 可选
-# userPrompt = "请总结以下内容：{{input}}"
-# input = "selection"               # selection / clipboard / prompt / none
-# sessionMode = "dedicated"          # 本轮仅支持 dedicated（独立后台会话）
-# timeoutSec = 120                   # 可选；覆盖 profile.timeoutSec，未设置回退 profile
-# autoShow = true
-# notifyOnDone = false
-# [actions.overrides]                # 可选覆盖 profile 参数
-# temperature = 0.2
-# maxTokens = 1200
-# model = "gpt-4o-mini"

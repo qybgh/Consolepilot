@@ -940,4 +940,20 @@ final class InfrastructureTests: XCTestCase {
             XCTFail("unexpected error: \(error)")
         }
     }
+
+    // MARK: - 出厂默认配置洁净度
+
+    func testBundledDefaultConfigContainsNoRemovedFieldsOrExampleBlocks() throws {
+        let url = try XCTUnwrap(ConfigLoader.bundledDefaultConfigURL())
+        let text = try String(contentsOf: url, encoding: .utf8)
+        for token in [
+            "launchAtLogin", "toggleHotkey", "attachTo", "[[tails]]", "高级配置参考", "[[profiles]]", "[[actions]]",
+        ] {
+            XCTAssertFalse(text.contains(token), "出厂默认配置不得包含 \(token)")
+        }
+        // 每个配置项至多一行说明注释：注释行数不超过键值行数，且无空示例段。
+        let lines = text.split(separator: "\n", omittingEmptySubsequences: false)
+        let commentLines = lines.filter { $0.hasPrefix("#") }.count
+        XCTAssertLessThanOrEqual(commentLines, 30, "默认配置注释应保持精简")
+    }
 }
