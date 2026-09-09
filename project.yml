@@ -32,6 +32,7 @@ targets:
     deploymentTarget: "14.0"
     sources:
       - path: Sources/Domain/Models
+      - path: Sources/Domain/Providers
       - path: Sources/Domain/Repositories
       - path: Sources/Domain/UseCases
       - path: Sources/Domain/Config

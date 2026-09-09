@@ -1,15 +1,4 @@
-import ConsolepilotDomain
-import Foundation
-
-package enum StreamEvent: Sendable, Equatable {
-    case started(model: String)
-    case delta(String)
-    case usage(input: Int, output: Int)
-    case finishReason(String)
-    case finished
-    case failed(TransportError)
-}
-
+/// 一次合帧后交付给 UI 的增量批次。
 package struct TokenBatch: Sendable, Equatable {
     package let sessionId: String
     package let text: String

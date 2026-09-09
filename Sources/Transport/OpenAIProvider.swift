@@ -59,22 +59,25 @@ package actor OpenAICompatibleProvider: AIProvider {
 
     private func emit(_ frame: SSEFrame, continuation: AsyncThrowingStream<StreamEvent, Error>.Continuation) throws {
         guard frame.data.trimmingCharacters(in: .whitespacesAndNewlines) != "[DONE]" else { return }
-        guard let data = frame.data.data(using: .utf8),
-            let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-        else { throw TransportError.decoding("OpenAI SSE data 不是有效 JSON") }
-        if let usage = object["usage"] as? [String: Any],
-            let input = usage["prompt_tokens"] as? Int, let output = usage["completion_tokens"] as? Int
+        guard let data = frame.data.data(using: .utf8) else {
+            throw TransportError.decoding("OpenAI SSE data 不是有效 JSON")
+        }
+        let chunk: OpenAICompatStreamChunk
+        do {
+            chunk = try JSONDecoder().decode(OpenAICompatStreamChunk.self, from: data)
+        } catch {
+            throw TransportError.decoding("OpenAI SSE data 不是有效 JSON")
+        }
+        if let usage = chunk.usage,
+            let input = usage.promptTokens, let output = usage.completionTokens
         {
             continuation.yield(.usage(input: input, output: output))
         }
-        if let choices = object["choices"] as? [[String: Any]], let delta = choices.first?["delta"] as? [String: Any],
-            let text = delta["content"] as? String, !text.isEmpty
-        {
+        guard let choice = chunk.choices?.first else { return }
+        if let text = choice.delta?.content, !text.isEmpty {
             continuation.yield(.delta(text))
         }
-        if let choices = object["choices"] as? [[String: Any]],
-            let reason = choices.first?["finish_reason"] as? String, !reason.isEmpty
-        {
+        if let reason = choice.finishReason, !reason.isEmpty {
             continuation.yield(.finishReason(reason))
             Log.info("OpenAI finish_reason=\(reason)", category: .transport)
         }

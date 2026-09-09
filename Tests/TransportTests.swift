@@ -129,10 +129,13 @@ final class TransportTests: XCTestCase {
         let built = try RequestBuilder().buildOpenAI(request)
         XCTAssertEqual(built.url?.absoluteString, "https://example.com/v1/chat/completions")
         XCTAssertEqual(built.value(forHTTPHeaderField: "Authorization"), "Bearer secret-value")
-        let body = try XCTUnwrap(built.httpBody).jsonObject() as! [String: Any]
-        XCTAssertEqual(body["model"] as? String, "override")
-        XCTAssertEqual(body["max_tokens"] as? Int, 20)
-        XCTAssertEqual(body["temperature"] as? Double, 0.8)
+        let body = try JSONDecoder().decode(
+            OpenAICompatRequestBody.self, from: XCTUnwrap(built.httpBody))
+        XCTAssertEqual(body.model, "override")
+        XCTAssertEqual(body.maxTokens, 20)
+        XCTAssertEqual(body.temperature, 0.8)
+        XCTAssertEqual(body.stream, true)
+        XCTAssertEqual(body.messages.map(\.content), ["system", "hello"])
 
         let anthropicProfile = Profile(
             id: "anthropic", provider: .anthropic, baseURL: URL(string: "https://api.anthropic.com")!, model: "claude",
@@ -145,6 +148,10 @@ final class TransportTests: XCTestCase {
         XCTAssertEqual(anthropicBuilt.value(forHTTPHeaderField: "anthropic-version"), "2023-06-01")
         XCTAssertNil(anthropicBuilt.value(forHTTPHeaderField: "Authorization"))
         XCTAssertEqual(anthropicBuilt.timeoutInterval, 9)
+        let anthropicBody = try JSONDecoder().decode(
+            AnthropicRequestBody.self, from: XCTUnwrap(anthropicBuilt.httpBody))
+        XCTAssertNil(anthropicBody.system)
+        XCTAssertEqual(anthropicBody.messages.map(\.content), ["hello"])
     }
 
     @MainActor
@@ -481,8 +488,4 @@ private final class SQLTraceBox: @unchecked Sendable {
         values.removeAll()
         lock.unlock()
     }
-}
-
-extension Data {
-    fileprivate func jsonObject() throws -> Any { try JSONSerialization.jsonObject(with: self) }
 }

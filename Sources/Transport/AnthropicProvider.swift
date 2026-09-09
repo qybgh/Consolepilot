@@ -58,25 +58,42 @@ package actor AnthropicProvider: AIProvider {
     }
 
     private func emit(_ frame: SSEFrame, continuation: AsyncThrowingStream<StreamEvent, Error>.Continuation) throws {
-        guard let data = frame.data.data(using: .utf8),
-            let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-        else { throw TransportError.decoding("Anthropic SSE data 不是有效 JSON") }
+        guard let data = frame.data.data(using: .utf8) else {
+            throw TransportError.decoding("Anthropic SSE data 不是有效 JSON")
+        }
         switch frame.event {
         case "message_start":
-            if let message = object["message"] as? [String: Any], let usage = message["usage"] as? [String: Any],
-                let input = usage["input_tokens"] as? Int
-            {
+            let payload: AnthropicMessageStart
+            do {
+                payload = try JSONDecoder().decode(AnthropicMessageStart.self, from: data)
+            } catch {
+                throw TransportError.decoding("Anthropic SSE data 不是有效 JSON")
+            }
+            if let input = payload.message?.usage?.inputTokens {
                 continuation.yield(.usage(input: input, output: 0))
             }
         case "content_block_delta":
-            if let delta = object["delta"] as? [String: Any], let text = delta["text"] as? String {
+            let payload: AnthropicContentBlockDelta
+            do {
+                payload = try JSONDecoder().decode(AnthropicContentBlockDelta.self, from: data)
+            } catch {
+                throw TransportError.decoding("Anthropic SSE data 不是有效 JSON")
+            }
+            if let text = payload.delta?.text {
                 continuation.yield(.delta(text))
             }
         case "message_delta":
-            if let usage = object["usage"] as? [String: Any], let output = usage["output_tokens"] as? Int {
+            let payload: AnthropicMessageDelta
+            do {
+                payload = try JSONDecoder().decode(AnthropicMessageDelta.self, from: data)
+            } catch {
+                throw TransportError.decoding("Anthropic SSE data 不是有效 JSON")
+            }
+            if let output = payload.usage?.outputTokens {
                 continuation.yield(.usage(input: 0, output: output))
             }
-        default: break
+        default:
+            break
         }
     }
 

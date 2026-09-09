@@ -1,3 +1,4 @@
+import ConsolepilotDomain
 import Foundation
 
 /// A deterministic local streaming provider used for end-to-end acceptance without API credentials.
