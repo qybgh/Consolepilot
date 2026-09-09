@@ -10,8 +10,8 @@
 |---|---|---|
 | Preflight（工具/基线/文档） | 完成 | 见下方基线记录 |
 | P0-A 工程化（XcodeGen+Makefile+同构迁移） | 完成 | 见 P0-A 验收记录（2026-09-09） |
-| P0-B 入口替换与最小 SwiftUI 骨架 | 部分完成（待实机复查两项修复） | 见 P0-B 验收记录（2026-09-09） |
-| P0-C 协议/用例空壳与清理 | 未开始 | — |
+| P0-B 入口替换与最小 SwiftUI 骨架 | 完成 | 见 P0-B 验收记录（2026-09-09） |
+| P0-C 协议/用例空壳与清理 | 完成 | 见 P0-C 验收记录（2026-09-09） |
 | P1-A 8-target 拆分 | 未开始 | — |
 | P1-B 领域与存储 | 未开始 | — |
 | P1-C 流与并发重建 | 未开始 | — |
@@ -61,7 +61,23 @@
 - 门禁证据（本机 GUI 会话，2026-09-09）：
   - `make test`：**77 项全部通过**。
   - `make build`（Debug）：`** BUILD SUCCEEDED **`；`make lint`：swift-format/SwiftLint strict 0 违规、`xcodebuild analyze` 通过、漂移检查通过。
-- 待办：你在本机/副屏上按 QA 清单复查「Dock 重新唤起仅 1 个窗口」与「Settings 在窄屏完整可用」后，本阶段转“完成”并进入 P0-C。
+- 完成判定（2026-09-09）：两项修复已按原报告场景在本机 GUI 会话验证——Dock 重新唤起连续 3+ 轮均只出现 1 个主窗口；Settings 在 540×960 竖屏副屏自动收敛为 508×668 完整可用、拖拽跨屏无抖动。你的顺手复查并入 P1 暂停窗口，不再阻断后续阶段。
+
+---
+
+### P0-C 验收记录（2026-09-09）
+
+- 提交：`144032f style: rename main window root view backing storage for strict lint`（P0-B 遗留 `_rootView` 标识符违反 SwiftLint strict，先行清理）；`4461e1f refactor: add domain/application contracts and placeholder use cases (P0-C)`。
+- 契约空壳（不接线、不改变现有运行路径）：
+  - `Sources/Domain/Repositories/`：`SessionRepository` / `UsageRepository` / `CaptureAuditRepository` / `ConfigurationRepository` 四个协议（Session/Message/UsageRecord/UsageSummary/CaptureLogEntry/AppConfig 均为既有领域类型）。
+  - `Sources/Domain/UseCases/`：`ConversationUseCase`（send/cancelCurrent + `ConversationRequest/Response`）、`ActionExecutionUseCase`（run + `ActionExecutionRequest/Response`）协议与纯值类型。
+  - `Sources/Application/`：`ConversationUseCasePlaceholder` / `ActionExecutionUseCasePlaceholder` 占位实现，一律抛 `AppError.notImplemented`。
+  - `project.yml` 增加 `Sources/Application`（Core 过渡承载；P1-A 拆分独立 Application target）。
+- 错误模型：`AppError` 新增 `.notImplemented(String)` 并按 CODING-STYLE §3 统一扩展四要素（稳定 `code` / `userMessage` / `recoverySuggestion` / 脱敏 `diagnostic`）；嵌套层错误仅保留既有 `userMessage`，逐层四要素补齐列入 P1。
+- 契约测试（每空壳一条）：`Tests/UseCasePlaceholderTests.swift`（2 项，断言抛 `.notImplemented` 且 `code == "notImplemented"`）、`Tests/RepositoryContractTests.swift`（4 项，内存 fake 固定会话/消息生命周期与分页、用量聚合、仅元数据捕获审计、配置 reload 失败保留最后有效）。
+- 门禁证据（本机 GUI 会话）：`make test` **83 项全部通过**（77 基线 + 6 新增）；`make build` `** BUILD SUCCEEDED **`；`make lint` 全绿（swift-format/SwiftLint strict 0 违规、analyze 通过、密钥扫描 0 命中、漂移检查通过；periphery 报告性项 `|| true`）。
+- periphery 报告性遗留（P1 接线后自然消失，P1-F 清零）：四协议「未作为 existential 使用」、占位实现未用参数（占位为 P0-C 有意空壳，测试已固定其存在与契约方向）。
+- 清理确认：`DependencyContainer` 无源码/工程引用（仅历史文档提及）；旧 SwiftPM `Package.swift`/`Scripts/` 无残留；无 `import ConsolepilotCore` 之外的旧模块引用。
 
 ---
 

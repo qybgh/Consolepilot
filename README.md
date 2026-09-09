@@ -8,7 +8,7 @@ macOS 上的本地 AI 控制台工具：捕获选中文本/剪贴板，通过本
 
 - `project.yml`：工程唯一编辑源（XcodeGen）。改工程先改它，再执行 `make xcodegen`。
 - `Consolepilot.xcodeproj`：由 XcodeGen 生成并提交，`make lint` 内含漂移检查。
-- `Sources/`：源码（App/CLI/Domain/Infrastructure/Rendering/Transport）。
+- `Sources/`：源码（App/CLI/Domain/Application/Infrastructure/Rendering/Transport；Domain 内含 `Models/Stores/Repositories/UseCases`）。
 - `Tests/`：XCTest 测试（经 Xcode scheme 运行）。
 - `Resources/`：`Info.plist`（版本号走 xcconfig 变量）与 entitlements。
 - `Configs/`：Debug/Release `.xcconfig`（Swift 6 严格并发、warnings-as-errors）。
