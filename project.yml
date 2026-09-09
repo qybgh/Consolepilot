@@ -24,13 +24,36 @@ packages:
     url: https://github.com/dduan/TOMLDecoder.git
     exactVersion: 0.4.5
 targets:
+  ConsolepilotDomain:
+    type: framework
+    platform: macOS
+    productName: ConsolepilotDomain
+    deploymentTarget: "14.0"
+    sources:
+      - path: Sources/Domain/Models
+      - path: Sources/Domain/Repositories
+      - path: Sources/Domain/UseCases
+      - path: Sources/Domain/Config
+      - path: Sources/Domain/TemplateEngine.swift
+      - path: Sources/Domain/AppError.swift
+      - path: Sources/Domain/Log.swift
+      - path: Sources/Domain/HotkeySpec.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.consolepilot.ConsolepilotDomain
+        SKIP_INSTALL: YES
+        DYLIB_INSTALL_NAME_BASE: "@rpath"
+        MACH_O_TYPE: staticlib
+        SWIFT_EMIT_LOC_STRINGS: NO
   ConsolepilotCore:
     type: framework
     platform: macOS
     productName: ConsolepilotCore
     deploymentTarget: "14.0"
     sources:
-      - path: Sources/Domain
+      - path: Sources/Domain/Stores
+      - path: Sources/Domain/ActionRunner.swift
+      - path: Sources/Domain/StreamCoordinator.swift
       - path: Sources/Application
       - path: Sources/Infrastructure
       - path: Sources/Rendering
@@ -38,6 +61,7 @@ targets:
       - path: Sources/Infrastructure/Config/DefaultConfig.toml
         buildPhase: resources
     dependencies:
+      - target: ConsolepilotDomain
       - package: GRDB
       - package: TOMLDecoder
     settings:
@@ -58,6 +82,7 @@ targets:
         buildPhase: resources
     dependencies:
       - target: ConsolepilotCore
+      - target: ConsolepilotDomain
       - package: GRDB
       - package: TOMLDecoder
     info:
@@ -84,6 +109,7 @@ targets:
         buildPhase: resources
     dependencies:
       - target: ConsolepilotCore
+      - target: ConsolepilotDomain
       - package: GRDB
       - package: TOMLDecoder
     settings:
@@ -103,6 +129,7 @@ targets:
     dependencies:
       - target: Consolepilot
       - target: ConsolepilotCore
+      - target: ConsolepilotDomain
       - package: GRDB
       - package: TOMLDecoder
     settings:

@@ -1,5 +1,6 @@
 import AppKit
 @preconcurrency import ApplicationServices
+import ConsolepilotDomain
 
 struct AccessibilityCapture {
     func selectedText() throws -> String {

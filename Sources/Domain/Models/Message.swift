@@ -1,15 +1,15 @@
 import Foundation
 
 /// 消息领域实体（纯值类型；持久化映射见 `MessageRecord`）。
-struct Message: Identifiable, Sendable, Equatable {
-    let id: String
-    let sessionId: String
-    let role: MessageRole
-    var content: String
-    var state: MessageState
-    let createdAt: Date
+public struct Message: Identifiable, Sendable, Equatable {
+    public let id: String
+    public let sessionId: String
+    public let role: MessageRole
+    public var content: String
+    public var state: MessageState
+    public let createdAt: Date
 
-    init(
+    public init(
         id: String = UUID().uuidString, sessionId: String, role: MessageRole, content: String,
         state: MessageState = .complete, createdAt: Date = Date()
     ) {
@@ -22,13 +22,23 @@ struct Message: Identifiable, Sendable, Equatable {
     }
 }
 
-enum MessageRole: String, Sendable, CaseIterable { case system, user, assistant, tool }
-enum MessageState: String, Sendable { case complete, interrupted, failed }
+public enum MessageRole: String, Sendable, CaseIterable { case system, user, assistant, tool }
+public enum MessageState: String, Sendable { case complete, interrupted, failed }
 
-struct MessageHeader: Sendable, Equatable {
-    let timestamp: Date
-    let role: MessageRole
-    let channel: SessionChannel
-    let model: String?
-    let sourceApp: String?
+public struct MessageHeader: Sendable, Equatable {
+    public let timestamp: Date
+    public let role: MessageRole
+    public let channel: SessionChannel
+    public let model: String?
+    public let sourceApp: String?
+
+    public init(
+        timestamp: Date, role: MessageRole, channel: SessionChannel, model: String?, sourceApp: String?
+    ) {
+        self.timestamp = timestamp
+        self.role = role
+        self.channel = channel
+        self.model = model
+        self.sourceApp = sourceApp
+    }
 }

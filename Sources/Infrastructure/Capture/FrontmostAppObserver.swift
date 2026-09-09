@@ -1,4 +1,5 @@
 import AppKit
+import ConsolepilotDomain
 
 @MainActor
 final class FrontmostAppObserver {
@@ -12,10 +13,4 @@ final class FrontmostAppObserver {
             appName: app?.localizedName, bundleId: app?.bundleIdentifier,
             windowTitle: PermissionChecker.hasAccessibility ? AccessibilityCapture().focusedWindowTitle() : nil)
     }
-}
-
-struct FrontmostInfo: Sendable, Equatable {
-    let appName: String?
-    let bundleId: String?
-    let windowTitle: String?
 }

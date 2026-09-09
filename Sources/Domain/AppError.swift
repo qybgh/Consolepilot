@@ -1,6 +1,6 @@
 import Foundation
 
-enum AppError: Error, Equatable, Sendable {
+public enum AppError: Error, Equatable, Sendable {
     case config(ConfigError)
     case capture(CaptureError)
     case transport(TransportError)
@@ -9,7 +9,7 @@ enum AppError: Error, Equatable, Sendable {
     case notImplemented(String)
 
     /// 面向用户的直接可读文案（中文）。
-    var userMessage: String {
+    public var userMessage: String {
         switch self {
         case .config(let error): error.userMessage
         case .capture(let error): error.userMessage
@@ -21,7 +21,7 @@ enum AppError: Error, Equatable, Sendable {
     }
 
     /// 稳定错误码：不随文案变化，供测试与日志断言。
-    var code: String {
+    public var code: String {
         switch self {
         case .config: "config.invalid"
         case .capture(let error):
@@ -58,7 +58,7 @@ enum AppError: Error, Equatable, Sendable {
     }
 
     /// 下一步可执行建议；无恢复动作的错误返回空串。
-    var recoverySuggestion: String {
+    public var recoverySuggestion: String {
         switch self {
         case .config: "请检查配置文件语法与字段取值后重试。"
         case .capture: "请确认已授予辅助功能权限，或改用复制文本后触发。"
@@ -79,7 +79,7 @@ enum AppError: Error, Equatable, Sendable {
     }
 
     /// 脱敏诊断信息：仅含类型/状态等安全上下文，绝不包含密钥或捕获正文。
-    var diagnostic: String {
+    public var diagnostic: String {
         switch self {
         case .config: "配置错误"
         case .capture: "文本捕获失败"
@@ -90,7 +90,7 @@ enum AppError: Error, Equatable, Sendable {
         }
     }
 
-    var isRetryable: Bool {
+    public var isRetryable: Bool {
         switch self {
         case .transport(let error): error.isRetryable
         default: false
@@ -107,11 +107,11 @@ public enum ConfigError: Error, Equatable, Sendable {
     }
 }
 
-enum CaptureError: Error, Equatable, Sendable {
+public enum CaptureError: Error, Equatable, Sendable {
     case noPermission, allStrategiesFailed, emptySelection
     case excludedApp(String)
     case secureInputActive
-    var userMessage: String {
+    public var userMessage: String {
         switch self {
         case .noPermission:
             return "无法捕获选中文字：需要辅助功能权限"
@@ -127,7 +127,7 @@ enum CaptureError: Error, Equatable, Sendable {
     }
 }
 
-enum TransportError: Error, Equatable, Sendable {
+public enum TransportError: Error, Equatable, Sendable {
     case unauthorized
     case rateLimited(retryAfter: Duration?)
     case serverError(status: Int)
@@ -138,7 +138,7 @@ enum TransportError: Error, Equatable, Sendable {
     case connectionLost
     case configInvalid(String)
 
-    var userMessage: String {
+    public var userMessage: String {
         switch self {
         case .unauthorized: return "网络请求失败：API Key 无效或未授权"
         case .rateLimited(let retry):
@@ -153,29 +153,29 @@ enum TransportError: Error, Equatable, Sendable {
         case .configInvalid(let details): return "网络请求失败：配置无效（\(details)）"
         }
     }
-    var isRetryable: Bool {
+    public var isRetryable: Bool {
         if case .rateLimited = self { return true }
         if case .serverError(let status) = self { return status >= 500 }
         return false
     }
 }
 
-enum StorageError: Error, Equatable, Sendable {
+public enum StorageError: Error, Equatable, Sendable {
     case unavailable(String)
-    var userMessage: String {
+    public var userMessage: String {
         switch self {
         case .unavailable(let details): return "存储失败：\(details)"
         }
     }
 }
 
-enum ServerError: Error, Equatable, Sendable {
+public enum ServerError: Error, Equatable, Sendable {
     case portUnavailable(tried: [UInt16])
     case nonLoopbackRejected
     case payloadTooLarge
     case tooManyConnections
     case unauthorized
-    var userMessage: String {
+    public var userMessage: String {
         switch self {
         case .portUnavailable: return "本地服务失败：端口不可用"
         case .nonLoopbackRejected: return "本地服务失败：仅允许本机访问"

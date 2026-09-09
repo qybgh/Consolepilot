@@ -1,3 +1,4 @@
+import ConsolepilotDomain
 import Foundation
 
 protocol AIProvider: Sendable {

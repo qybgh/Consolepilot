@@ -1,16 +1,7 @@
+import ConsolepilotDomain
 import Foundation
 import GRDB
 import Observation
-
-enum UsagePeriod: String, CaseIterable, Sendable { case today, week, all }
-
-struct UsageSummary: Equatable, Sendable {
-    let inputTokens: Int
-    let outputTokens: Int
-    let costUSD: Double
-    let requestCount: Int
-    let byModel: [String: UsageSummary]
-}
 
 @MainActor @Observable
 final class UsageStore {

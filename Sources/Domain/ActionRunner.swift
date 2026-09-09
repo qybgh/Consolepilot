@@ -1,4 +1,5 @@
 import AppKit
+import ConsolepilotDomain
 import Foundation
 
 @MainActor

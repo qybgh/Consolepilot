@@ -1,4 +1,5 @@
 import AppKit
+import ConsolepilotDomain
 
 struct SyntaxPalette: Sendable, Equatable {
     let keyword: NSColor

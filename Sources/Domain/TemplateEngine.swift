@@ -1,21 +1,35 @@
 import Foundation
 
-struct TemplateContext: Sendable {
-    let input: String
-    let selection: String?
-    let clipboard: String?
-    let frontmost: FrontmostInfo
-    let now: Date
-    let language: String
+public struct TemplateContext: Sendable {
+    public let input: String
+    public let selection: String?
+    public let clipboard: String?
+    public let frontmost: FrontmostInfo
+    public let now: Date
+    public let language: String
+
+    public init(
+        input: String, selection: String?, clipboard: String?, frontmost: FrontmostInfo, now: Date,
+        language: String
+    ) {
+        self.input = input
+        self.selection = selection
+        self.clipboard = clipboard
+        self.frontmost = frontmost
+        self.now = now
+        self.language = language
+    }
 }
 
-struct TemplateEngine {
-    static let knownPlaceholders: Set<String> = [
-        "input", "selection", "clipboard", "app", "bundleId", "appBundleId", "windowTitle", "date", "time", "datetime",
-        "language", "lang",
+public struct TemplateEngine {
+    public static let knownPlaceholders: Set<String> = [
+        "input", "selection", "clipboard", "app", "bundleId", "appBundleId", "windowTitle", "date", "time",
+        "datetime", "language", "lang",
     ]
 
-    func render(_ template: String, context: TemplateContext) -> String {
+    public init() {}
+
+    public func render(_ template: String, context: TemplateContext) -> String {
         let date = context.now.formatted(.dateTime.year().month().day())
         let time = context.now.formatted(.dateTime.hour().minute().second())
         let values: [String: String] = [
@@ -42,7 +56,7 @@ struct TemplateEngine {
         }
     }
 
-    static func placeholders(in template: String) -> Set<String> {
+    public static func placeholders(in template: String) -> Set<String> {
         var result = Set<String>()
         var cursor = template.startIndex
         while let start = template[cursor...].range(of: "{{") {

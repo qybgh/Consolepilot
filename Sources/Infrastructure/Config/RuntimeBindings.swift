@@ -1,3 +1,4 @@
+import ConsolepilotDomain
 import Foundation
 
 /// Applies a validated configuration to runtime consumers as one atomic update.

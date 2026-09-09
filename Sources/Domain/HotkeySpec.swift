@@ -1,13 +1,14 @@
 import Foundation
 
-struct HotkeySpec: Sendable, Equatable, Hashable {
-    let key: String
-    let modifiers: Set<String>
+/// 全局快捷键规格（纯解析规则；Carbon 注册实现位于上层）。
+public struct HotkeySpec: Sendable, Equatable, Hashable {
+    public let key: String
+    public let modifiers: Set<String>
     /// Number of consecutive presses required before the Action fires.
     /// `1` is the normal single-press behavior; `2` enables double-press.
-    let pressCount: Int
+    public let pressCount: Int
 
-    init?(_ raw: String) {
+    public init?(_ raw: String) {
         let parts = raw.split(separator: "+").map { String($0).lowercased() }
         guard let rawKey = parts.last, !rawKey.isEmpty else { return nil }
         let keyParts = rawKey.split(separator: "*", omittingEmptySubsequences: false)

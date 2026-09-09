@@ -1,20 +1,20 @@
 import Foundation
 
 /// 会话领域实体（纯值类型，不依赖 GRDB；持久化映射见 `SessionRecord`）。
-struct Session: Identifiable, Sendable, Equatable {
-    let id: String
-    var title: String
-    let channel: SessionChannel
-    let actionId: String?
-    let profileId: String?
-    let provider: ProviderKind?
-    let model: String?
-    let sourceApp: String?
-    let createdAt: Date
-    var updatedAt: Date
-    var archived: Bool
+public struct Session: Identifiable, Sendable, Equatable {
+    public let id: String
+    public var title: String
+    public let channel: SessionChannel
+    public let actionId: String?
+    public let profileId: String?
+    public let provider: ProviderKind?
+    public let model: String?
+    public let sourceApp: String?
+    public let createdAt: Date
+    public var updatedAt: Date
+    public var archived: Bool
 
-    init(
+    public init(
         channel: SessionChannel, title: String, meta: SessionMeta, id: String = UUID().uuidString,
         createdAt: Date = Date(), updatedAt: Date? = nil, archived: Bool = false
     ) {
@@ -32,12 +32,22 @@ struct Session: Identifiable, Sendable, Equatable {
     }
 }
 
-struct SessionMeta: Sendable, Equatable {
-    let actionId: String?
-    let profileId: String?
-    let provider: ProviderKind?
-    let model: String?
-    let sourceApp: String?
+public struct SessionMeta: Sendable, Equatable {
+    public let actionId: String?
+    public let profileId: String?
+    public let provider: ProviderKind?
+    public let model: String?
+    public let sourceApp: String?
+
+    public init(
+        actionId: String?, profileId: String?, provider: ProviderKind?, model: String?, sourceApp: String?
+    ) {
+        self.actionId = actionId
+        self.profileId = profileId
+        self.provider = provider
+        self.model = model
+        self.sourceApp = sourceApp
+    }
 }
 
-enum SessionChannel: String, Sendable, CaseIterable { case action, console, cli, push, tail }
+public enum SessionChannel: String, Sendable, CaseIterable { case action, console, cli, push, tail }

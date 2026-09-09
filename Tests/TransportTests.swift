@@ -1,4 +1,5 @@
 import AppKit
+import ConsolepilotDomain
 import XCTest
 
 @testable import ConsolepilotCore

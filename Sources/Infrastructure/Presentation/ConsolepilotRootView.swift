@@ -1,4 +1,5 @@
 import AppKit
+import ConsolepilotDomain
 
 /// Keeps NSSplitView's normal divider/layout behavior while allowing the
 /// divider to disappear when the sidebar is hidden. Hiding a pane can leave

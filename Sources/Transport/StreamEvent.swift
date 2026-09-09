@@ -1,3 +1,4 @@
+import ConsolepilotDomain
 import Foundation
 
 enum StreamEvent: Sendable, Equatable {

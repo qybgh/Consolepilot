@@ -1,3 +1,4 @@
+import ConsolepilotDomain
 import Foundation
 
 /// Shared HTTP and URLSession error semantics for all streaming providers.

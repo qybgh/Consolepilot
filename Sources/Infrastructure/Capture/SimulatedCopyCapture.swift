@@ -1,5 +1,6 @@
 import AppKit
 @preconcurrency import Carbon.HIToolbox
+import ConsolepilotDomain
 
 @MainActor
 struct SimulatedCopyCapture {

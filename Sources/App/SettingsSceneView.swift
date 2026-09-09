@@ -1,5 +1,6 @@
 import AppKit
 import ConsolepilotCore
+import ConsolepilotDomain
 import SwiftUI
 
 /// SwiftUI `Settings` 场景内容：承载 TOML 配置编辑器。
