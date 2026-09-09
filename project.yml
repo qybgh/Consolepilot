@@ -45,6 +45,22 @@ targets:
         DYLIB_INSTALL_NAME_BASE: "@rpath"
         MACH_O_TYPE: staticlib
         SWIFT_EMIT_LOC_STRINGS: NO
+  ConsolepilotApplication:
+    type: framework
+    platform: macOS
+    productName: ConsolepilotApplication
+    deploymentTarget: "14.0"
+    sources:
+      - path: Sources/Application
+    dependencies:
+      - target: ConsolepilotDomain
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.consolepilot.ConsolepilotApplication
+        SKIP_INSTALL: YES
+        DYLIB_INSTALL_NAME_BASE: "@rpath"
+        MACH_O_TYPE: staticlib
+        SWIFT_EMIT_LOC_STRINGS: NO
   ConsolepilotCore:
     type: framework
     platform: macOS
@@ -54,7 +70,6 @@ targets:
       - path: Sources/Domain/Stores
       - path: Sources/Domain/ActionRunner.swift
       - path: Sources/Domain/StreamCoordinator.swift
-      - path: Sources/Application
       - path: Sources/Infrastructure
       - path: Sources/Rendering
       - path: Sources/Transport
@@ -130,6 +145,7 @@ targets:
       - target: Consolepilot
       - target: ConsolepilotCore
       - target: ConsolepilotDomain
+      - target: ConsolepilotApplication
       - package: GRDB
       - package: TOMLDecoder
     settings:

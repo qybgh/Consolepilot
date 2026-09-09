@@ -1,7 +1,7 @@
 import ConsolepilotDomain
 import XCTest
 
-@testable import ConsolepilotCore
+@testable import ConsolepilotApplication
 
 /// P0-C 空壳契约测试：固定 Conversation/Action 两个用例协议的入口存在，
 /// 且占位实现明确抛 `.notImplemented`（P1 接线前的契约方向）。

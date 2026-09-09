@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		00427AAE0D9AB76ACA8B53E5 /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D06441C51810F9B4AE49834 /* Session.swift */; };
+		0374803BEFCEBCF8005B3B8F /* ConsolepilotApplication.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8B581AB306B20BA10AFB759B /* ConsolepilotApplication.framework */; };
 		0B4C9D43B4C65BCD3357DB94 /* ANSIParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44D9ECB3AD542AFB482DB78F /* ANSIParser.swift */; };
 		0CB73AA2471D3BFB4CD56A8B /* ConsolepilotCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B9425CF65953A07486812071 /* ConsolepilotCore.framework */; };
 		115E17A0D155BF189645CC13 /* SessionRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 604F89ADDA4466C548983F3F /* SessionRecord.swift */; };
@@ -29,11 +30,9 @@
 		34850F503AD65F6193263F93 /* UsageRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 734E1A7CB34B900078B9DCFD /* UsageRepository.swift */; };
 		3E26FD6E7E09A014DF069941 /* TransportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02C036AD7A2CDC12A169F39C /* TransportTests.swift */; };
 		41952AC7C0D382EDB35FBEB3 /* Usage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9255F98BAADD84B9AAD39A9E /* Usage.swift */; };
-		422BBC6CD7184DB7A5133762 /* ActionExecutionUseCasePlaceholder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B90B8B629B2616E7961407A /* ActionExecutionUseCasePlaceholder.swift */; };
 		4358F3D61E5A03AD9950E708 /* MarkdownStyler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7103A4F208F05FF4DCE7519A /* MarkdownStyler.swift */; };
 		4479E2C909604A780F5AC753 /* DatabaseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11F489615A94C101FC0382B /* DatabaseTests.swift */; };
 		48127F5406E00115DEBF7CAF /* AIProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA3B0E6DD61117AE63FEAEBD /* AIProvider.swift */; };
-		4A6A29F678CC011DBAEDEE3A /* ConversationUseCasePlaceholder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A76CC799800DD805DFC2433 /* ConversationUseCasePlaceholder.swift */; };
 		4C6CFCF44A0229B1AFADDC4B /* ConfigLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD237EA520EB4DF7292FF201 /* ConfigLoader.swift */; };
 		4F573AB5E44CA518A3AD6E05 /* RepositoryContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD36A78C1B49D5D3C4385D18 /* RepositoryContractTests.swift */; };
 		505F04B236DC0424F8382004 /* SecretResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5046A235DEF83A3CDD9B10A8 /* SecretResolver.swift */; };
@@ -68,8 +67,10 @@
 		92B36FF4775EC2CA833D2C49 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 7C00812EE789E5AEE72392B1 /* GRDB */; };
 		937D8DE124F251F7AD3A910E /* AppConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB035699130D5CEC0043F642 /* AppConfig.swift */; };
 		9441DBCEBB5EC5071996ADE1 /* SettingsSceneView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFC109E4AAF70381DC6DCC5A /* SettingsSceneView.swift */; };
+		9534880218B5FEC5397F7E8E /* ConsolepilotApplication.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 8B581AB306B20BA10AFB759B /* ConsolepilotApplication.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		98CD02FA736E733ADDCBAE5F /* Database.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FED8F0A354602B350752698 /* Database.swift */; };
 		992F6BBB121AE7034DFA70A2 /* MessageRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0863F21C4996B339A1FC23A /* MessageRecord.swift */; };
+		9B0622860186856B2FB0FD26 /* ActionExecutionUseCasePlaceholder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B90B8B629B2616E7961407A /* ActionExecutionUseCasePlaceholder.swift */; };
 		9D40BF8793ECAF8D4027B614 /* StreamCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E1F1770FFBFD75E83F8686D /* StreamCoordinator.swift */; };
 		A1C44EDC4A4535D07CA58535 /* ConsolepilotDomain.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 95A1BD57A363538A43CCA440 /* ConsolepilotDomain.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		A49656097F2C354EF1478237 /* PermissionChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AC31D4C2DF8CC6D29DD1C85 /* PermissionChecker.swift */; };
@@ -106,6 +107,7 @@
 		E7B5A3D1EB9ACC43A6E5D8F2 /* FrontmostAppObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8FE6D63A47A6F2819DF0BA3 /* FrontmostAppObserver.swift */; };
 		E88CDFD15F851ACA3D2F3BE2 /* ConsolepilotCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B9425CF65953A07486812071 /* ConsolepilotCore.framework */; };
 		E8E176BDE0E6D02789B230A0 /* CaptureStrategy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 925C5A8E63ACF26D1250909E /* CaptureStrategy.swift */; };
+		EC409EF7534F705337E5094C /* ConversationUseCasePlaceholder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A76CC799800DD805DFC2433 /* ConversationUseCasePlaceholder.swift */; };
 		ECC52E27FD6F766675A8BCD1 /* ConsolepilotDomain.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 95A1BD57A363538A43CCA440 /* ConsolepilotDomain.framework */; };
 		ECC66B33C229005AAD8DD75C /* CLIMain.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8A01A5C4DABBF902F6B0872 /* CLIMain.swift */; };
 		ECF2BC25953AE8477C26A856 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B444CCBC489F6D29775177A /* AppDelegate.swift */; };
@@ -133,6 +135,13 @@
 			remoteGlobalIDString = D4071CB4023595F6B4389F1A;
 			remoteInfo = ConsolepilotDomain;
 		};
+		2F90C527BAD55B73F23615D5 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1F837000A17D18C1633F56C6 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C576A769408CEA5ABAB070D7;
+			remoteInfo = ConsolepilotApplication;
+		};
 		73905CD58B0861787B9DFD45 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 1F837000A17D18C1633F56C6 /* Project object */;
@@ -155,6 +164,13 @@
 			remoteInfo = ConsolepilotCore;
 		};
 		9A2C8E7D64AAF3FBEC822E51 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1F837000A17D18C1633F56C6 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D4071CB4023595F6B4389F1A;
+			remoteInfo = ConsolepilotDomain;
+		};
+		F26B985E70BEE345C91B6E94 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 1F837000A17D18C1633F56C6 /* Project object */;
 			proxyType = 1;
@@ -198,6 +214,7 @@
 			files = (
 				8D44B3EF734E43B1930FE633 /* ConsolepilotCore.framework in Embed Frameworks */,
 				8CB0AEADF541398AC1B00B2C /* ConsolepilotDomain.framework in Embed Frameworks */,
+				9534880218B5FEC5397F7E8E /* ConsolepilotApplication.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -261,6 +278,7 @@
 		83119EDB581D8339ED6E19F7 /* ServerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerTests.swift; sourceTree = "<group>"; };
 		868713BABD4F544F7D67DB01 /* SessionRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionRepository.swift; sourceTree = "<group>"; };
 		8B444CCBC489F6D29775177A /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		8B581AB306B20BA10AFB759B /* ConsolepilotApplication.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ConsolepilotApplication.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		8D4C5B4B7AEDB3DF07B53576 /* ConfigStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigStore.swift; sourceTree = "<group>"; };
 		8EA091CCFD5450A301A89260 /* Migrations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Migrations.swift; sourceTree = "<group>"; };
 		917B50B54DB7057960AFFC5D /* UseCasePlaceholderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UseCasePlaceholderTests.swift; sourceTree = "<group>"; };
@@ -340,6 +358,7 @@
 			files = (
 				760D4B991B33388A713E7423 /* ConsolepilotCore.framework in Frameworks */,
 				677FEFE72C3E24047C9DFF42 /* ConsolepilotDomain.framework in Frameworks */,
+				0374803BEFCEBCF8005B3B8F /* ConsolepilotApplication.framework in Frameworks */,
 				CF52787078F8D27BC2F874E0 /* GRDB in Frameworks */,
 				16535677045454DA25CF2C20 /* TOMLDecoder in Frameworks */,
 			);
@@ -591,6 +610,7 @@
 			children = (
 				3558DEFE8E9C76992B6D0D06 /* consolepilot */,
 				53C49925643D2A44EA29574A /* Consolepilot.app */,
+				8B581AB306B20BA10AFB759B /* ConsolepilotApplication.framework */,
 				B9425CF65953A07486812071 /* ConsolepilotCore.framework */,
 				95A1BD57A363538A43CCA440 /* ConsolepilotDomain.framework */,
 				7A5010A38F8C3350AE9DDFDD /* ConsolepilotTests.xctest */,
@@ -651,6 +671,7 @@
 				E3DCAFC753FDAE14416B964B /* PBXTargetDependency */,
 				5BCC35B44355D702BE0876F7 /* PBXTargetDependency */,
 				2D117EAF05998F4DA345FCBA /* PBXTargetDependency */,
+				8957462A64BE7E0CC60279B6 /* PBXTargetDependency */,
 			);
 			name = ConsolepilotTests;
 			packageProductDependencies = (
@@ -730,6 +751,24 @@
 			productReference = 53C49925643D2A44EA29574A /* Consolepilot.app */;
 			productType = "com.apple.product-type.application";
 		};
+		C576A769408CEA5ABAB070D7 /* ConsolepilotApplication */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7932C7A80DF76DE683EF38B7 /* Build configuration list for PBXNativeTarget "ConsolepilotApplication" */;
+			buildPhases = (
+				0C6FB8C9C1F33B321E2E86C1 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				EEB98A070D7F65A703237E39 /* PBXTargetDependency */,
+			);
+			name = ConsolepilotApplication;
+			packageProductDependencies = (
+			);
+			productName = ConsolepilotApplication;
+			productReference = 8B581AB306B20BA10AFB759B /* ConsolepilotApplication.framework */;
+			productType = "com.apple.product-type.framework";
+		};
 		D4071CB4023595F6B4389F1A /* ConsolepilotDomain */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 22C5E4E848E10FA4D2990B21 /* Build configuration list for PBXNativeTarget "ConsolepilotDomain" */;
@@ -772,6 +811,10 @@
 						DevelopmentTeam = "\"\"";
 						ProvisioningStyle = Manual;
 					};
+					C576A769408CEA5ABAB070D7 = {
+						DevelopmentTeam = "\"\"";
+						ProvisioningStyle = Manual;
+					};
 					D4071CB4023595F6B4389F1A = {
 						DevelopmentTeam = "\"\"";
 						ProvisioningStyle = Manual;
@@ -797,6 +840,7 @@
 			projectRoot = "";
 			targets = (
 				D4071CB4023595F6B4389F1A /* ConsolepilotDomain */,
+				C576A769408CEA5ABAB070D7 /* ConsolepilotApplication */,
 				1E563FD5AEB3A10B1994B05B /* ConsolepilotCore */,
 				736485057E8D1AA6ADD067A8 /* Consolepilot */,
 				64634A7F9D5257724625CE5C /* ConsolepilotCLI */,
@@ -842,6 +886,15 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		0C6FB8C9C1F33B321E2E86C1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9B0622860186856B2FB0FD26 /* ActionExecutionUseCasePlaceholder.swift in Sources */,
+				EC409EF7534F705337E5094C /* ConversationUseCasePlaceholder.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		73F4A2A755064C912962D08E /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -873,7 +926,6 @@
 				48127F5406E00115DEBF7CAF /* AIProvider.swift in Sources */,
 				0B4C9D43B4C65BCD3357DB94 /* ANSIParser.swift in Sources */,
 				8354410CF43CD88F945D155F /* AccessibilityCapture.swift in Sources */,
-				422BBC6CD7184DB7A5133762 /* ActionExecutionUseCasePlaceholder.swift in Sources */,
 				6088BC32DDC4F6EFB3C37BCD /* ActionRunner.swift in Sources */,
 				539C76AEDC5C2B9ADC1CA2AE /* AnthropicProvider.swift in Sources */,
 				63889B9624D27B5EA7735B24 /* CaptureLogRecord.swift in Sources */,
@@ -886,7 +938,6 @@
 				FB87765AE901C114437B02A0 /* ConfigStore.swift in Sources */,
 				DB5B16EEB2C0F94E8954921A /* ConfigValidator.swift in Sources */,
 				1BE57A34C4A222CA7A783505 /* ConsolepilotRootView.swift in Sources */,
-				4A6A29F678CC011DBAEDEE3A /* ConversationUseCasePlaceholder.swift in Sources */,
 				98CD02FA736E733ADDCBAE5F /* Database.swift in Sources */,
 				83C05068CD37D6E9A7385726 /* FileTailWatcher.swift in Sources */,
 				E7B5A3D1EB9ACC43A6E5D8F2 /* FrontmostAppObserver.swift in Sources */,
@@ -981,6 +1032,11 @@
 			target = 1E563FD5AEB3A10B1994B05B /* ConsolepilotCore */;
 			targetProxy = 0001417F3FECFBE6D32310C4 /* PBXContainerItemProxy */;
 		};
+		8957462A64BE7E0CC60279B6 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C576A769408CEA5ABAB070D7 /* ConsolepilotApplication */;
+			targetProxy = 2F90C527BAD55B73F23615D5 /* PBXContainerItemProxy */;
+		};
 		904ADA76AAA6009FF9A4EB34 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = D4071CB4023595F6B4389F1A /* ConsolepilotDomain */;
@@ -1006,6 +1062,11 @@
 			target = 736485057E8D1AA6ADD067A8 /* Consolepilot */;
 			targetProxy = F997481DFBF5620D877B14A8 /* PBXContainerItemProxy */;
 		};
+		EEB98A070D7F65A703237E39 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D4071CB4023595F6B4389F1A /* ConsolepilotDomain */;
+			targetProxy = F26B985E70BEE345C91B6E94 /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -1026,6 +1087,28 @@
 				PRODUCT_NAME = Consolepilot;
 				SDKROOT = macosx;
 				SWIFT_EMIT_LOC_STRINGS = NO;
+			};
+			name = Debug;
+		};
+		3E83DBE0BC03F1DF2F57C9FD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = com.consolepilot.ConsolepilotApplication;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Debug;
 		};
@@ -1307,6 +1390,28 @@
 			};
 			name = Debug;
 		};
+		F45414E35322321CE3E5FF85 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = com.consolepilot.ConsolepilotApplication;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Release;
+		};
 		F59090CEF622FBA6AD8732E8 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1342,6 +1447,15 @@
 			buildConfigurations = (
 				D97326C2245D8AEFC7990D8A /* Debug */,
 				F59090CEF622FBA6AD8732E8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		7932C7A80DF76DE683EF38B7 /* Build configuration list for PBXNativeTarget "ConsolepilotApplication" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3E83DBE0BC03F1DF2F57C9FD /* Debug */,
+				F45414E35322321CE3E5FF85 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
