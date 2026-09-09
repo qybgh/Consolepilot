@@ -8,8 +8,13 @@ BUILD_DIR := build
 DIST_DIR := dist
 XCODEBUILD_FLAGS := -project $(PROJECT) -scheme $(SCHEME) -destination 'platform=macOS'
 ARCH ?= $(shell uname -m)
+# 签名：默认使用本机 Apple Development 证书。稳定 designated requirement 让
+# 辅助功能/钥匙串授权在重建后不失效（ad-hoc 每次构建身份都变，需反复授权）。
+# 无证书的机器/CI 可用 SIGN_IDENTITY=- 显式回退 ad-hoc。
+SIGN_IDENTITY ?= Apple Development: 1217194271@qq.com (WCHFR3G7VB)
+SIGN_STYLE := Manual
 
-.PHONY: bootstrap xcodegen test lint build release clean distclean drift-check
+.PHONY: bootstrap xcodegen test lint build release clean distclean drift-check sign-check uninstall
 
 bootstrap: ## 校验 Xcode/工具/依赖/架构（实施前一次性准备）
 	@command -v xcodebuild >/dev/null || { echo "错误：需要完整 Xcode（xcodebuild 不在 PATH）"; exit 1; }; \
@@ -59,29 +64,43 @@ lint: drift-check ## 格式/静态/分析/密钥扫描/死代码门禁
 	periphery scan --project $(PROJECT) --schemes $(SCHEME) --report-exclude Tests || true
 	@echo "✓ lint 全绿"
 
-build: ## Debug arm64 构建 App + CLI（产物在 build/）
-	xcodebuild $(XCODEBUILD_FLAGS) -configuration Debug -derivedDataPath $(BUILD_DIR) CODE_SIGNING_ALLOWED=NO build
+sign-check: ## 校验签名身份可用（SIGN_IDENTITY=- 时跳过）
+	@if [ "$(SIGN_IDENTITY)" != "-" ]; then \
+		security find-identity -v -p codesigning | grep -Fq -- "$(SIGN_IDENTITY)" || { \
+			echo "错误：找不到签名身份 $(SIGN_IDENTITY)" >&2; \
+			echo "请先在本机钥匙串安装该开发者证书，或用 SIGN_IDENTITY=- 回退 ad-hoc 签名" >&2; \
+			exit 1; \
+		}; \
+		echo "✓ 签名身份：$(SIGN_IDENTITY)"; \
+	fi
+
+build: sign-check ## Debug arm64 构建 App + CLI（产物在 build/；开发者证书签名）
+	xcodebuild $(XCODEBUILD_FLAGS) -configuration Debug -derivedDataPath $(BUILD_DIR) \
+		CODE_SIGN_IDENTITY="$(SIGN_IDENTITY)" CODE_SIGN_STYLE=$(SIGN_STYLE) build
 	@echo "App: $(BUILD_DIR)/Build/Products/Debug/Consolepilot.app"
 	@echo "CLI: $(BUILD_DIR)/Build/Products/Debug/consolepilot"
 
-release: ## Release + ad-hoc 签名 + ZIP + SHA-256 manifest；用法 make release VERSION=0.2.0-p1
+release: sign-check ## Release + 开发者证书签名 + ZIP + SHA-256 manifest；用法 make release VERSION=0.2.0-p1
 	@set -e; \
 	test -n "$(VERSION)" || { echo "用法：make release VERSION=x.y.z"; exit 1; }; \
 	xcodebuild $(XCODEBUILD_FLAGS) -configuration Release -derivedDataPath $(BUILD_DIR) \
-		CODE_SIGN_IDENTITY="-" CODE_SIGN_STYLE=Manual \
+		CODE_SIGN_IDENTITY="$(SIGN_IDENTITY)" CODE_SIGN_STYLE=$(SIGN_STYLE) \
 		MARKETING_VERSION=$(VERSION) CURRENT_PROJECT_VERSION=1 build; \
 	rm -rf $(DIST_DIR) && mkdir -p $(DIST_DIR); \
 	APP=$(DIST_DIR)/Consolepilot.app; \
 	rm -rf $$APP && cp -R $(BUILD_DIR)/Build/Products/Release/Consolepilot.app $$APP; \
 	CLI=$(DIST_DIR)/consolepilot; \
 	cp $(BUILD_DIR)/Build/Products/Release/consolepilot $$CLI && chmod +x $$CLI; \
-	codesign --force --sign - --entitlements Resources/Consolepilot.entitlements $$APP; \
+	codesign --force --sign "$(SIGN_IDENTITY)" --entitlements Resources/Consolepilot.entitlements "$$APP"; \
 	codesign --verify --deep --strict --verbose=2 $$APP; \
 	cd $(DIST_DIR) && { \
 		shasum -a 256 Consolepilot.app/Contents/MacOS/Consolepilot consolepilot > SHA256SUMS.txt; \
 		zip -qry ../Consolepilot-$(VERSION).zip Consolepilot.app consolepilot SHA256SUMS.txt; \
 	} && mv ../Consolepilot-$(VERSION).zip Consolepilot-$(VERSION).zip && shasum -a 256 Consolepilot-$(VERSION).zip; \
 	echo "✓ 产物：$(DIST_DIR)/Consolepilot-$(VERSION).zip"
+
+uninstall: ## 卸载后清理应用数据（配置/数据库/偏好/缓存/TCC；钥匙串默认保留）
+	./uninstall.sh
 
 clean: ## 清理构建产物与 DerivedData
 	rm -rf $(BUILD_DIR) $(DIST_DIR)
