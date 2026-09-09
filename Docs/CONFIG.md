@@ -23,6 +23,7 @@ Action 关键语义：
 
 - `sessionMode`：本轮仅支持 `"dedicated"`——每次 Action 在独立后台会话执行，并按 `actionId + sourceApp` 复用最近一个空闲会话续写上下文；旧 `attachTo` 值会给出迁移报错（含行号），改为 `sessionMode = "dedicated"` 即可。
 - `timeoutSec`（可选整数，> 0）：覆盖该 Action 所用 Profile 的 `timeoutSec`；未设置时回退 Profile 默认值。超时按请求超时处理并落为失败终态。
+- `maxContextBytes`（可选整数，≥ 1024）：该 Action 的单次请求上下文输入上限（UTF-8 字节）；显式设置时覆盖所用 Profile 的 `maxContextBytes`，未设置时回退 Profile 默认值（缺省 131072 ≈ 128 KiB）。见下文「上下文上限与裁剪」。
 - `autoShow`：Action 完成并创建会话后是否显示主窗口（仅 `orderFront`，不抢占前台）。
 - `notifyOnDone`：App 不在前台时，Action 完成/失败后发本地通知；通知只含 Action 名与状态。
 - 非法配置（含 `nan`/`inf` 数值、旧字段）保存时校验报错，保留上一份有效配置不变。
@@ -30,6 +31,18 @@ Action 关键语义：
 Action 快捷键支持双击语法：`hotkey = "cmd+c*2"` 表示在约 420 毫秒内连续按两次 `Command+C` 才触发；不带 `*2` 时为单次触发。双击模式的第一次按键只用于计时，Action 捕获选区时会自行模拟 `⌘C`。
 
 当 Action 使用 `input = "selection"` 时，Consolepilot 先尝试辅助功能直读；失败后会在原前台 App 中静默模拟一次 `⌘C`，并且只有确认剪贴板确实发生变化才接受结果，不会把上一次复制的旧内容当作当前选区。捕获后会恢复原剪贴板。`input = "clipboard"` 才会明确读取现有剪贴板。
+
+## 上下文上限与裁剪
+
+`maxContextBytes` 限制**单次请求携带给 Provider 的上下文大小**（UTF-8 字节，含 system 提示与全部消息正文），避免长会话与超大 Action 输入撑爆模型上下文。语义：
+
+- 层级：`Action.maxContextBytes` 显式设置时覆盖 `Profile.maxContextBytes`；两者都未设置时按 Profile 默认 `131072`（128 KiB）。
+- 裁剪策略（只作用于发送给 Provider 的请求副本，落库与界面历史保持完整，重复触发结果确定）：
+  1. system 提示始终保留并优先占用预算；
+  2. 超预算时从最早的整条历史消息开始丢弃；
+  3. 只剩最新一条仍超时，才在 UTF-8 字符边界截断其正文（绝不拆开多字节字符，也绝不丢弃当前轮次）。
+- 取值下限 1024（1 KiB）；低于下限会在保存时校验报错并保留上一份有效配置。
+- 主窗口对话同样按当前 Profile 的 `maxContextBytes` 对请求做上述裁剪。
 
 ## Profile 与 API Key 配置（按当前文件操作）
 
@@ -91,6 +104,7 @@ apiKey = "${keychain:my-provider-key}"
 temperature = 0.3
 maxTokens = 4096
 timeoutSec = 120
+maxContextBytes = 131072 # 上下文输入上限（字节），缺省 131072（约 128 KiB）
 ```
 
 然后在钥匙串中创建同名账户 `my-provider-key`，填入 API Key。`id` 必须唯一；保存成功后 Profile 菜单会立即刷新，无需重启 App。
