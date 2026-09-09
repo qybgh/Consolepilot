@@ -47,6 +47,8 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
     private let mockProvider = MockAIProvider()
     private var requestTasks: [String: Task<Void, Never>] = [:]
     private var actionTasks: [String: Task<Void, Never>] = [:]
+    /// 统一取消（`StreamCoordinator.cancel`）的一次性派发任务，随流终态清理。
+    private var cancelTasks: [String: Task<Void, Never>] = [:]
     private var pendingActionTask: Task<Void, Never>?
     private var inputHistory: [String] = []
     private var inputHistoryIndex: Int?
@@ -649,6 +651,7 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
                     + Self.formatDuration(totalDuration) + suffix
                 completionStatuses[sessionId] = status
                 actionTasks.removeValue(forKey: sessionId)
+                cancelTasks.removeValue(forKey: sessionId)
                 if sessionStore?.currentId == sessionId {
                     statusLabel.stringValue = status
                 }
@@ -1156,24 +1159,37 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
             let count = sessionStore?.sessions.count ?? 0
             statusLabel.stringValue = "当前共有 \(count) 个会话"
         case "/stop":
-            guard let currentId = sessionStore?.currentId,
-                coordinator?.isStreaming(sessionId: currentId) == true
-            else {
-                statusLabel.stringValue = "当前没有进行中的生成"
-                return true
-            }
-            coordinator?.interrupt(sessionId: currentId)
-            requestTasks[currentId]?.cancel()
-            requestTasks.removeValue(forKey: currentId)
-            actionTasks[currentId]?.cancel()
-            actionTasks.removeValue(forKey: currentId)
-            statusLabel.stringValue = "已中断 · 已收内容将保留"
-            updateSessionUIState()
-            reloadSessionButtons()
+            stopCurrentGeneration()
         default:
             statusLabel.stringValue = "未知命令：\(command) · 输入 /help 查看帮助"
         }
         return true
+    }
+
+    /// 停止当前会话的流。统一取消经 `StreamCoordinator.cancel(sessionId:)`
+    /// （先同步保留已收内容，再终止执行任务）；UI 层任务句柄同步清理。
+    private func stopCurrentGeneration() {
+        guard let currentId = sessionStore?.currentId,
+            coordinator?.isStreaming(sessionId: currentId) == true
+        else {
+            statusLabel.stringValue = "当前没有进行中的生成"
+            return
+        }
+        stopGeneration(sessionId: currentId)
+    }
+
+    private func stopGeneration(sessionId: String) {
+        cancelTasks[sessionId]?.cancel()
+        cancelTasks[sessionId] = Task { @MainActor [weak self] in
+            await self?.coordinator?.cancel(sessionId: sessionId)
+        }
+        requestTasks[sessionId]?.cancel()
+        requestTasks.removeValue(forKey: sessionId)
+        actionTasks[sessionId]?.cancel()
+        actionTasks.removeValue(forKey: sessionId)
+        statusLabel.stringValue = "已中断 · 已收内容将保留"
+        updateSessionUIState()
+        reloadSessionButtons()
     }
 
     private func updateSessionUIState() {
@@ -1245,20 +1261,7 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
             renderer.clear()
             statusLabel.stringValue = "终端已清屏"
         case .interrupt:
-            guard let currentId = sessionStore?.currentId,
-                coordinator?.isStreaming(sessionId: currentId) == true
-            else {
-                statusLabel.stringValue = "当前没有进行中的生成"
-                return
-            }
-            coordinator?.interrupt(sessionId: currentId)
-            requestTasks[currentId]?.cancel()
-            requestTasks.removeValue(forKey: currentId)
-            actionTasks[currentId]?.cancel()
-            actionTasks.removeValue(forKey: currentId)
-            statusLabel.stringValue = "已中断 · 已收内容将保留"
-            updateSessionUIState()
-            reloadSessionButtons()
+            stopCurrentGeneration()
         case .complete:
             statusLabel.stringValue = "暂无补全候选"
         case .historyPrev:

@@ -40,6 +40,9 @@ package final class StreamCoordinator {
     private let sessionStore: SessionStore
     private let usageStore: UsageStore
     private var contexts: [String: Context] = [:]
+    /// 每个进行中会话的请求执行（取消注册表）：退出/会话删除/配置热重载/
+    /// Action 取消/断网统一经 `cancel(sessionId:)` 走此表。
+    private var executions: [String: RequestExecution] = [:]
 
     package var onDelta: ((String, TokenBatch) -> Void)?
     package var onFinish: ((String, MessageState) -> Void)?
@@ -90,23 +93,54 @@ package final class StreamCoordinator {
     }
 
     package func consume(_ events: AsyncThrowingStream<StreamEvent, Error>, into sessionId: String) async {
-        guard contexts[sessionId] == nil else { return }
+        guard contexts[sessionId] == nil, executions[sessionId] == nil else { return }
         let context = Context()
+        let execution = RequestExecution(sessionId: sessionId)
         contexts[sessionId] = context
-        defer { contexts.removeValue(forKey: sessionId) }
+        executions[sessionId] = execution
+        defer {
+            contexts.removeValue(forKey: sessionId)
+            executions.removeValue(forKey: sessionId)
+        }
+        // 消费任务由 RequestExecution 持有：统一取消经 `cancel(sessionId:)`
+        // 取消该任务，从而立即终止对 events 的迭代（不再接收增量）。
+        await execution.start { [weak self] in
+            await self?.drive(events, into: sessionId, execution: execution)
+        }
+        await execution.awaitCompletion()
+    }
 
+    /// 统一取消入口：先同步 flush + checkpoint（不丢已收内容），再取消该会话
+    /// 的执行任务；此后该会话不再产生增量。
+    package func cancel(sessionId: String) async {
+        interrupt(sessionId: sessionId)
+        await executions[sessionId]?.cancel()
+    }
+
+    /// 逐事件驱动流状态机并维护 checkpoint/usage。任务被取消时 `for await`
+    /// 立即结束（或 `Task.checkCancellation` 抛出），已收前缀以 `.interrupted`
+    /// 落库保留。
+    private func drive(
+        _ events: AsyncThrowingStream<StreamEvent, Error>, into sessionId: String,
+        execution: RequestExecution
+    ) async {
+        guard let context = contexts[sessionId] else { return }
+        await execution.mark(.connecting)
+        var outcome: RequestExecution.State = .failed
         do {
             for try await event in events {
                 try Task.checkCancellation()
                 switch event {
                 case .started(let startedModel):
                     context.model = startedModel
+                    await execution.mark(.streaming)
                     onStarted?(sessionId, startedModel)
                 case .delta(let delta):
                     if !context.didReceiveFirstDelta {
                         context.didReceiveFirstDelta = true
                         let latency = context.clockStartedAt.duration(to: ContinuousClock.now)
                         context.firstDeltaLatency = latency
+                        await execution.mark(.streaming)
                         onFirstDelta?(sessionId, latency)
                         Log.info("流首字节：session=\(sessionId) latency=\(latency)", category: .transport)
                     }
@@ -125,9 +159,11 @@ package final class StreamCoordinator {
                     onFinishReason?(sessionId, reason)
                 case .finished:
                     flush(context, sessionId: sessionId)
+                    outcome = .completed
                     finish(context, sessionId: sessionId, state: .complete)
                 case .failed:
                     flush(context, sessionId: sessionId)
+                    outcome = .failed
                     finish(context, sessionId: sessionId, state: .failed)
                 }
             }
@@ -138,14 +174,18 @@ package final class StreamCoordinator {
             if !context.didFinish {
                 flush(context, sessionId: sessionId)
                 finish(context, sessionId: sessionId, state: .interrupted)
+                outcome = Task.isCancelled ? .cancelled : .failed
             }
         } catch {
             flush(context, sessionId: sessionId)
             finish(context, sessionId: sessionId, state: .interrupted)
+            outcome = (error is CancellationError) ? .cancelled : .failed
             if !(error is CancellationError) {
                 Log.error("流消费中断：\(error)", category: .domain)
             }
         }
+        // 终态登记；若 `cancel()` 已先行把状态置为终态，此处的写入会被忽略。
+        await execution.mark(outcome)
     }
 
     private func flush(_ context: Context, sessionId: String) {
