@@ -267,3 +267,29 @@
 - 门禁：**105 项全绿**（97 基线 + 8 新）；`make lint` 全绿（drift/swift-format/SwiftLint/analyze/密钥扫描/import 方向零违规；periphery 报告仅 `|| true` 记录，P1-F 清零）。
 - 既有 20 项 TransportTests 语义全迁移通过（作为 Gate 0.4 契约证据延续）。
 - 遗留（明确归属后续阶段）：Provider 真实动网子集与低权限测试账户（实机/凭据到位后补跑，见 PLAN §6.3）；`RequestExecution` 时间/错误/usage 记账与 Action 级 `timeoutSec` 语义 → P1-E。
+
+### P1-E 验收记录（Action 生命周期与配置处置，2026-09-09）
+
+- 提交：`079a826 refactor: drop tails and legacy action/general config fields (P1-E)`；`b406bb9 feat: implement Action dedicated sessions and real use-case wiring (P1-E)`。
+- Schema 处置（D6/D7 落地，先于接线提交）：
+  - `GeneralConfig` 删 `launchAtLogin`/`toggleHotkey`；`Action` 删 `attachTo`、增 `sessionMode`（仅 `.dedicated`）与 `timeoutSec: Int?`；`tails`/`TailConfig` 及 CLI `tail`、HTTP `/tail`、UI push、watcher 全链路删除。
+  - `attachTo` 旧值 → `ConfigLoader.userFacingParseError` 迁移报错（含行号与 `sessionMode = "dedicated"` 改法）；TOML 数值 `nan/inf` 由 validator 有限数检查与 preflight 双重拦截；非 Syntax 形态的解析错误也带行号。
+  - `theme`/`fontName`/`fontSize`/`compactFontSize`/`opacity`/`alwaysOnTop` 仅保留解析与校验，界面接线留 P2（默认配置与 CONFIG.md 已注明）。
+- Action 生命周期接线：
+  - `ActionRunner` 成为 `ActionExecutionUseCase` 的真实实现（占位删除），`run` 返回会话 id（`@discardableResult`）；会话按 `actionId + sourceApp` 复用最近一个空闲（无进行中流）dedicated 会话续写，并发进行中会话不参与复用，避免污染同一流。
+  - 独立会话续写携带完整历史（新增 `SessionStore.history(sessionId:)`，仅 user/assistant 轮次入上下文）。
+  - 超时语义：Action 级 `timeoutSec` 经 `mergedOverrides` 注入 `ChatRequest.overrides`，`RequestBuilder` 以 `overrides.timeoutSec ?? profile.timeoutSec` 设 `timeoutInterval`（删除旧硬编码 120）；`URLError.timedOut` 由 TransportSupport 映射为 `.failed(.network)` → 协调器落 `.failed` 终态 checkpoint（既有 Transport/StreamExecution 测试覆盖）。
+  - UI 接线（LegacyUI，P2 删除前过渡）：`/run` 使用返回会话 id 精确定位；`onSessionCreated` 对 `autoShow` 仅 `orderFront` 不抢焦点；`notifyOnDone` 完成/失败且 App 不在前台时经 `ActionNotifier`（UNUserNotificationCenter）发本地通知，正文只含 Action 名与状态，绝不含捕获正文/回复。
+- 稳定性修复：消息排序在 `created_at`（毫秒精度 TEXT）相同毫秒内回退随机 UUID 排序 → 改为 `created_at` + 插入序 `rowid` 双键（`history` 正序与分页倒序同步修正），消除同毫秒插入下 Action 续写上下文与分页顺序的偶发不确定。
+- 门禁：**108 项全绿**（107 基线 +2 ActionRunner 接线/复用测试 −1 占位契约测试等净变化）；`make lint` 全绿（drift/swift-format/SwiftLint/analyze/密钥扫描/import 方向零违规；periphery 报告性记录）。
+- 遗留：`periphery` 报告的 LegacyUI/Rendering 与 Provider 符号项 → P1-F 处置（结论见 P1-F 记录）。
+
+### P1-F 验收记录（死代码清理与收尾，2026-09-09）
+
+- 提交：`812f4af refactor: remove dead search/deleteAll APIs and add residue gate (P1-F)`；`21fcacb docs: sync config/shortcut guides and status for P1 (P1-F)`；后续 docs/release 提交。
+- 确定性死代码清理（逐项全仓库 grep 核实无调用方后删除）：`SessionStore.search(_:)`、`KeychainStore.deleteAll()`。TerminalRenderer 双 init 中未使用的 `init(textView:…)` 属 P2 整文件删除范围，不在 P1-F 逐成员动刀（避免与 P2 LegacyUI wholesale 删除重复制造 churn）。
+- 残留门禁：新增 `Scripts/check-residue.py` 并接入 `make lint`——确定性扫描 `ConsolepilotCore` 旧模块名、`[String: Any]` DTO、`FileTailWatcher`/`TailConfig`/`toggleHotkey`/`launchAtLogin`/`attachTo` 在 Sources/Tests/Resources/Configs/project.yml/README 的零残留；ConfigLoader 迁移报错与 InfrastructureTests 旧配置残留契约测试显式豁免。当前 0 违规。
+- 文档同步：README 状态与结构说明、`Docs/CONFIG.md`（字段语义/删除字段说明/Action `sessionMode`/`timeoutSec`/`autoShow`/`notifyOnDone`）、`Docs/SHORTCUTS.md`（移除 `general.toggleHotkey` 表述）。
+- Periphery 结论（工具链限制，非代码残留）：Periphery 3.8.0 在本工程（Xcode 16.4/Swift 6.1.2，`-package-name Consolepilot` 多 framework）漏报大量真实使用——例如同模块内 `RuntimeBindings` 对 `HotkeyRegistry` 的 `replaceAll/removeAll` 成员调用、LegacyUI 对 `MockAIProvider`/`LocalServer` 的实例化均被报 unused；清空 DerivedData 后重扫结论不变。以其报告驱动删除会破坏可用代码，故 P1-F 死代码判定以「全仓库 grep 确定性核实 + `xcodebuild analyze` + warnings-as-errors」为准；`make lint` 保留 periphery 为报告性（`|| true`），并已在 Makefile 注释与本文档说明原因。LegacyUI/Rendering 报告项随 P2 整层删除自然消失。
+- 门禁：**108 项全绿**；`make lint` 全绿（含新增残留扫描）；`make build` Debug/Release 通过；`make release VERSION=0.2.0-p1` 产物见 dist/。
+- **P1 DoD 判定**：PLAN §4 P1 完成条件逐条满足（8-target 依赖方向零违规、领域纯净、Repository/流/Provider/Action 契约全绿、删除项零残留、配置语义按 D6/D7）。按计划暂停，待你在 macOS 14 执行实机验收（清单见 `Docs/ACCEPTANCE-P1-MACOS14.md`，产物见 dist/）；真实 Provider 动网子集待你提供低权限测试凭据后补跑。
