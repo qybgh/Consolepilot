@@ -35,6 +35,12 @@ ALLOWED = {
 # 仅关注本工程模块族：跨模块边界由 Swift 编译期保证，这里只盯依赖方向。
 MODULE_FAMILY = re.compile(r"^Consolepilot(?:Core|Domain|Application|Infrastructure|LegacyUI|CLI)?$")
 
+# 纯净层禁止的系统框架：Domain/Application 不得依赖任何 UI/存储/网络框架。
+PURITY_FORBIDDEN = {
+    "GRDB", "GRDBSQLite", "AppKit", "SwiftUI", "Security", "Network", "Carbon",
+    "TOMLDecoder", "Observation", "CoreText", "Combine",
+}
+
 def module_for(path):
     rel = path.relative_to(ROOT).as_posix()
     for prefix, module in (
@@ -60,6 +66,9 @@ def main():
         text = swift.read_text(encoding="utf-8")
         imports = re.findall(r"^\s*(?:@testable\s+)?import\s+(\w+)", text, flags=re.MULTILINE)
         for name in imports:
+            if module in ("ConsolepilotDomain", "ConsolepilotApplication") and name in PURITY_FORBIDDEN:
+                violations.append(f"{swift.relative_to(ROOT)}: import {name} 违反 {module} 纯净层约束")
+                continue
             if not MODULE_FAMILY.match(name):
                 continue
             allowed = ALLOWED[module]

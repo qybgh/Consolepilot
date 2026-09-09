@@ -25,24 +25,10 @@ package final class UsageStore {
                 let interval: TimeInterval = period == .today ? 86_400 : 7 * 86_400
                 return record.createdAt >= Date().addingTimeInterval(-interval)
             }
-            return Self.makeSummary(records)
+            return UsageAggregator.summary(records)
         } catch {
             Log.error("读取用量失败：\(error)", category: .domain)
             return UsageSummary(inputTokens: 0, outputTokens: 0, costUSD: 0, requestCount: 0, byModel: [:])
         }
-    }
-
-    private static func makeSummary(_ records: [Usage]) -> UsageSummary {
-        let grouped = Dictionary(grouping: records, by: \.model)
-        let byModel = grouped.mapValues { makeTotals($0, byModel: [:]) }
-        return makeTotals(records, byModel: byModel)
-    }
-
-    private static func makeTotals(_ records: [Usage], byModel: [String: UsageSummary]) -> UsageSummary {
-        UsageSummary(
-            inputTokens: records.reduce(0) { $0 + $1.inputTokens },
-            outputTokens: records.reduce(0) { $0 + $1.outputTokens },
-            costUSD: records.compactMap(\.costUSD).reduce(0, +),
-            requestCount: records.count, byModel: byModel)
     }
 }
