@@ -12,10 +12,10 @@
 | P0-A 工程化（XcodeGen+Makefile+同构迁移） | 完成 | 见 P0-A 验收记录（2026-09-09） |
 | P0-B 入口替换与最小 SwiftUI 骨架 | 完成 | 见 P0-B 验收记录（2026-09-09） |
 | P0-C 协议/用例空壳与清理 | 完成 | 见 P0-C 验收记录（2026-09-09） |
-| P1-A 8-target 拆分 | 进行中（前置：实体/记录分离完成） | 见 P1 前置记录（2026-09-09） |
-| P1-B 领域与存储 | 进行中（实体纯化与 Records 落地；Repository 实现待续） | 见 P1 前置记录（2026-09-09） |
-| P1-C 流与并发重建 | 未开始 | — |
-| P1-D Provider 统一 contract + fixture | 未开始 | — |
+| P1-A 8-target 拆分 | 完成 | 见 P1-A 验收记录（多模块拆分完成，2026-09-09） |
+| P1-B 领域与存储 | 完成 | 见 P1-B 验收记录（Repository 实现，2026-09-09） |
+| P1-C 流与并发重建 | 完成 | 见 P1-C 验收记录（流与并发重建，2026-09-09） |
+| P1-D Provider 统一 contract + fixture | 完成 | 见 P1-D 验收记录（Provider 统一 contract，2026-09-09） |
 | P1-E Action 生命周期与配置处置 | 未开始 | — |
 | P1-F 死代码清理与收尾 | 未开始 | — |
 
@@ -252,3 +252,18 @@
 - 门禁：新增 `Tests/StreamExecutionTests.swift` 7 项（actor 生命周期、先取消后启动、取消幂等、终态不可变、coordinator 取消后不再收增量且已收前缀以 interrupted 落库、空闲会话取消 no-op、usage 恰好一次）；**97 项全绿**；`make lint` 全绿（drift/swift-format/SwiftLint/analyze/密钥扫描/import 方向零违规；periphery 报告仅 `|| true` 记录，P1-F 清零）。
 - 既有 TransportTests 语义全迁移通过（并行流隔离、1000 delta 合帧、SQLite trace 无活跃写、中断前缀、checkpoint、usage 恰好一次）。
 - 遗留（明确归属后续阶段）：取消协议的其余入口（会话删除/配置热重载/Action 取消）由 P1-E 的 ActionExecutionUseCase 接线；`RequestExecution` 时间/错误/usage 记账字段在 P1-E 落地；`consume` 调用方仍以 Coordinator API 为主，UseCase 直连 execution 留 P1-E。
+
+### P1-D 验收记录（Provider 统一 contract，2026-09-09）
+
+- 提交：`8b8c913 refactor: move provider contract to Domain and type-safe wire DTOs (P1-D)`；`ae6143b test: add provider stream contract fixtures and contract tests (P1-D)`。
+- Contract 上移 Domain：`AIProvider`/`ChatRequest`/`ChatMessage`/`StreamEvent` 迁至 `Sources/Domain/Providers/`（public contract 类型）；`TokenBatch` 落 `Sources/Infrastructure/TokenBatch.swift`（package）。
+- Wire DTO 强类型化（Transport 零 `[String: Any]`）：
+  - `OpenAICompatWire.swift`：`OpenAICompatMessage/RequestBody/StreamChunk/StreamChoice/StreamDelta/StreamUsage`；`AnthropicWire.swift`：`AnthropicChatMessage/RequestBody/MessageStart/ContentBlockDelta/MessageDelta/…`；均 file-level 扁平 Codable/Decodable（SwiftLint nesting ≤ 1 约束下不套命名空间）；请求体走 `JSONEncoder` 编码，响应走类型化 `JSONDecoder`，畸形帧抛 `TransportError.decoding`。
+  - `RequestBuilder.buildOpenAI/buildAnthropic` 输出类型化请求体；TransportTests 相应从 `[String: Any]` 断言改为解码类型字段。
+- Fixture 与契约测试：
+  - `Tests/Fixtures/providers/` 6 份 SSE 语料（openai/anthropic × 正常流/畸形帧/缺终止帧），作为 ConsolepilotTests 资源打包；共享 `Tests/Support/URLProtocolStub.swift`（TransportTests 内私有副本删除，去重）。
+  - 新增 `Tests/ProviderContractTests.swift` 8 项：正常流事件序列/usage/finishReason、畸形帧 decoding 错误、缺 `[DONE]`/`message_stop` → `connectionLost`、HTTP 401/403/500/503 类型化失败、重试资格（429/5xx 可重试，401/解码/取消不可）。
+  - `Scripts/verify-provider-contract.sh`（可执行）：重新生成 xcodeproj 后仅跑 ProviderContractTests，可重复执行。
+- 门禁：**105 项全绿**（97 基线 + 8 新）；`make lint` 全绿（drift/swift-format/SwiftLint/analyze/密钥扫描/import 方向零违规；periphery 报告仅 `|| true` 记录，P1-F 清零）。
+- 既有 20 项 TransportTests 语义全迁移通过（作为 Gate 0.4 契约证据延续）。
+- 遗留（明确归属后续阶段）：Provider 真实动网子集与低权限测试账户（实机/凭据到位后补跑，见 PLAN §6.3）；`RequestExecution` 时间/错误/usage 记账与 Action 级 `timeoutSec` 语义 → P1-E。
