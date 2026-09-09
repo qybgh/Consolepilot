@@ -65,5 +65,5 @@ Accessibility com.consolepilot.Consolepilot` → 给出钥匙串处理提示。
 
 - 若你曾把配置文件放在 `~/Library/Application Support/Consolepilot/config.toml`
   （旧版备用路径），脚本会连同该目录一并清理。
-- 卸载后重装属于全新安装：首次运行会用随包分发的精简默认配置重新生成
-  `~/.config/consolepilot/config.toml`，不包含旧字段或示例块。
+- 卸载后重装属于全新安装：首次运行会用随包分发的默认配置重新生成
+  `~/.config/consolepilot/config.toml`——不含旧字段与重复示例，文末以整段注释附上默认关闭的 Profile/Action 示例。

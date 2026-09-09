@@ -328,4 +328,9 @@
   - 修复二：Settings 编辑器新增「初始化」按钮——点击把编辑器内容恢复为随应用分发的初始默认配置（新增公开入口 `LocalServerClientConfiguration.defaultConfigurationText()`，与首次落盘模板同源），不直接落盘：点「保存更改」才覆盖磁盘并触发热重载，点「放弃更改」回到当前磁盘内容；与磁盘内容相同（如新装状态）时不标记未保存。按钮栏 3→4 键，宽度 116→92，保证 420pt 最小内容宽度下同一行不溢出（窄屏适配不回归）。
   - 测试：新增 `testDefaultConfigurationTextMatchesBundledTemplateAndValidates`（默认模板非空、与 bundle 一致、可通过完整校验）；门禁 **117 项全绿**（116 + 1）；`make lint` 全绿（drift/格式/SwiftLint/analyze/密钥/import 方向/残留扫描零违规）。
   - 交付产物重建：`make release VERSION=0.2.0-p1` → `Consolepilot-0.2.0-p1.zip` SHA `1d3bc23d…`（Apple Development 签名，Team `3CSL8ZN3AN`），消费者侧校验通过；包内二进制含新欢迎语与「已载入初始默认配置」状态文案，旧「Mock 验收模式已启动」零残留。
+- 本机验收反馈修订（默认配置恢复完整示例，2026-09-09）：
+  - 反馈：上一轮按“精简模板”移除 Profile/Action 示例块后，出厂配置“隐藏”了可用设置——不查文档的用户不知道还有 `[[profiles]]`/`[[actions]]`（含 `overrides`）可配。要求：给出示例、不重复不多余、不含过期设置项。
+  - 修订 `DefaultConfig.toml`：生效区仍为推荐值（每个配置项至多一行注释）；文末新增两段**整段注释**的完整示例——`[[profiles]]`（id/provider/baseURL/model/apiKey/temperature/maxTokens/timeoutSec/priceInput/priceOutput，注明 openai/anthropic、密钥引用规则）与 `[[actions]]`（id/name/hotkey/profile/systemPrompt/userPrompt/input/sessionMode/timeoutSec/autoShow/notifyOnDone + `[actions.overrides]`），取消注释并按需修改即启用。示例无过期字段、无重复示例段（overrides 仅一行说明其支持的键，避免与 Profile 键重复铺开）；首次安装仍解析为 0 Profile/0 Action，行为与 Mock 模式不变。
+  - 契约测试重构：`testBundledDefaultConfigIsCleanDiscoverableAndFreeOfRemovedFields`——① 过期/已移除字段（launchAtLogin/toggleHotkey/attachTo/tails/高级配置参考）零残留；② **可发现性**：解析器全部可配键必须出现在文件中（生效键或注释示例），防止再“隐藏设置”；③ 首次安装安全：剥去注释后不得出现激活的 `[[profiles]]`/`[[actions]]`。同步 CONFIG.md 与 UNINSTALL.md 措辞（不再声称“不含示例块”）。
+  - 门禁：**117 项全绿**（重构测试 1 换 1，数量不变）；`make lint` 全绿；`make release VERSION=0.2.0-p1` → `Consolepilot-0.2.0-p1.zip` SHA `fd9e076c…`（Apple Development 签名，Team `3CSL8ZN3AN`），消费者侧校验通过；包内 DefaultConfig 与源码一致（含注释示例、无过期字段、激活区无 Profile/Action）。
 - 至此 PLAN §6.2 自动化门禁全部落地。剩余人工验收：macOS 14 实机（清单见 `Docs/ACCEPTANCE-P1-MACOS14.md`）与真实 Provider 动网子集（待低权限测试凭据）；本机真实 Provider 会话已可用并随反馈持续复测中。

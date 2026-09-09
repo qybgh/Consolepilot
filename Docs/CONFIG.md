@@ -15,11 +15,11 @@
 
 `[general]` 控制本地端口、主题/字体/透明度/置顶等显示参数（解析与校验已保留，界面接线随 P2 SwiftUI 迁移实现）、滚动缓冲行数与真实 Provider 开关；`[server]` 控制鉴权 token 引用及最大请求体；`[capture]` 控制文本捕获策略、剪贴板恢复和长度限制。
 
-`[[profiles]]` 定义 Provider、Base URL、模型、密钥引用、生成参数和价格；`[[actions]]` 定义 Action 的提示词、输入来源、会话策略（`sessionMode`）、快捷键、超时与通知。日志尾随（`tails`）以及 `launchAtLogin`、`toggleHotkey`、`attachTo` 已按 D6/D7 决策移出本轮 schema：旧 `attachTo` 残留会报含行号的迁移错误；`launchAtLogin`/`toggleHotkey`/`tails` 残留会被忽略（已无对应功能），建议在设置中删除相应行与示例注释。默认配置与设置编辑器只显示配置本身（每项至多一行注释、不含示例块），完整示例见本文档。
+`[[profiles]]` 定义 Provider、Base URL、模型、密钥引用、生成参数和价格；`[[actions]]` 定义 Action 的提示词、输入来源、会话策略（`sessionMode`）、快捷键、超时与通知。日志尾随（`tails`）以及 `launchAtLogin`、`toggleHotkey`、`attachTo` 已按 D6/D7 决策移出本轮 schema：旧 `attachTo` 残留会报含行号的迁移错误；`launchAtLogin`/`toggleHotkey`/`tails` 残留会被忽略（已无对应功能），建议在设置中删除相应行与示例注释。默认配置为生效的推荐值，并在文末以整段注释附上默认关闭的 Profile/Action 完整字段示例（每个配置项至多一行注释、不含已移除字段），取消注释并按需修改即可启用；字段语义详见下文。
 
 `[server].authToken` 是可选的本地 CLI/HTTP 接口鉴权配置；留空即可关闭本地服务，不影响 App 内对话和真实 Provider。远程 Profile 的 API Key 会在 App 首次打开时预读取，以便一次性完成钥匙串授权。
 
-Action 每个字段的完整示例见 `Sources/Infrastructure/Config/DefaultConfig.toml`（随 App/CLI 分发）。关键语义：
+Action 关键语义：
 
 - `sessionMode`：本轮仅支持 `"dedicated"`——每次 Action 在独立后台会话执行，并按 `actionId + sourceApp` 复用最近一个空闲会话续写上下文；旧 `attachTo` 值会给出迁移报错（含行号），改为 `sessionMode = "dedicated"` 即可。
 - `timeoutSec`（可选整数，> 0）：覆盖该 Action 所用 Profile 的 `timeoutSec`；未设置时回退 Profile 默认值。超时按请求超时处理并落为失败终态。
