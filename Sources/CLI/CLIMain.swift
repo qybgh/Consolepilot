@@ -54,7 +54,7 @@ struct ConsolepilotCLI {
             FileManager.default.currentDirectoryPath + "/dist/Consolepilot.app",
         ]
         guard let app = candidates.first(where: { FileManager.default.fileExists(atPath: $0) }) else {
-            fputs("未找到 Consolepilot.app，请先运行 Scripts/build-local.sh\n", stderr)
+            fputs("未找到 Consolepilot.app，请先运行 make build\n", stderr)
             return
         }
         let process = Process()

@@ -8,8 +8,8 @@
 
 | 阶段 | 状态 | 证据 |
 |---|---|---|
-| Preflight（工具/基线/文档） | 进行中 | 见下方基线记录 |
-| P0-A 工程化（XcodeGen+Makefile+同构迁移） | 未开始 | — |
+| Preflight（工具/基线/文档） | 完成 | 见下方基线记录 |
+| P0-A 工程化（XcodeGen+Makefile+同构迁移） | 完成 | 见 P0-A 验收记录（2026-09-09） |
 | P0-B 入口替换与最小 SwiftUI 骨架 | 未开始 | — |
 | P0-C 协议/用例空壳与清理 | 未开始 | — |
 | P1-A 8-target 拆分 | 未开始 | — |
@@ -35,7 +35,22 @@
 
 ---
 
-更新日期：2026-08-29
+### P0-A 验收记录（2026-09-09）
+
+- 提交：`8d05410 refactor: migrate Consolepilot from SwiftPM to XcodeGen`；`8a775f7 chore: remove SwiftPM entry points and IntelliJ project files`。
+- 工程化落地：`project.yml`（唯一编辑源）→ XcodeGen 生成 `Consolepilot.xcodeproj`（Core framework/App/CLI/Tests 5 target；GRDB 7.8.0 + TOMLDecoder 0.4.5 精确锁定，Xcode 侧 `Package.resolved` 已提交）；`Makefile` 为唯一命令入口（bootstrap/test/lint/build/release/clean/xcodegen/drift-check）。
+- 构建配置：`Configs/Debug|Release.xcconfig`（Swift 6 严格并发、macOS 14.0、warnings-as-errors、ad-hoc 签名、版本变量）；`Resources/Info.plist` 真实文件，版本走 `$(MARKETING_VERSION)`/`$(CURRENT_PROJECT_VERSION)`。
+- 同构迁移：61 文件按原目录迁入，业务代码未改；必要适配 = ConfigLoader 默认配置资源定位（Bundle.main → ConsolepilotCore bundle id → 已加载 bundle 兜底，适配 Xcode 资源阶段）；`Bundle.module`/`#if SWIFT_PACKAGE` 分支已随 SwiftPM 删除一并移除。
+- 门禁证据（本机 GUI 会话）：
+  - `make test`（xcodebuild test）：**77 项全部通过**（含基线 3 项受限 shell 失败项，GUI 会话全绿）。
+  - Debug/Release `make build`：`** BUILD SUCCEEDED **`（App + CLI，DefaultConfig.toml 资源已入 App bundle）。
+  - `make lint`：swift-format strict 0 违规、SwiftLint strict 0 违规、`xcodebuild analyze` 通过、密钥扫描 0 命中、xcodeproj 漂移检查通过、periphery 仅报告 P0-B/P1 待删旧 UI 层遗留（报告性，`|| true`，P1-F 清零）。
+- 清理：`Package.swift`/`Package.resolved`/`Scripts/*` 已删除（旧 SwiftPM 入口不再并存）；`.idea/`、`Consolepilot.iml` 已从工作区移除并 gitignore；README 已更新为 Makefile/XcodeGen 指引。
+- 遗留：periphery 旧 UI 层报告项（ConsolepilotRootView/KeychainStore 未用符号/SecretResolver 冗余 public/Rendering 未用符号等）→ P0-B/P1 删除与清理范围；真实签名/notarization 仍按「P0 仅本机验证」策略不在此阶段处理。
+
+---
+
+### 更新日期与继续执行
 
 本文件是 `Consolepilot_plan_v4.0.md` 的执行看板。状态只按里程碑 DoD 判断：文件存在不等于完成，缺少测试、实机证据或门禁时统一标为“部分完成”。
 
