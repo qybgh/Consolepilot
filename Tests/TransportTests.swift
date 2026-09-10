@@ -135,6 +135,7 @@ final class TransportTests: XCTestCase {
         XCTAssertEqual(body.maxTokens, 20)
         XCTAssertEqual(body.temperature, 0.8)
         XCTAssertEqual(body.stream, true)
+        XCTAssertEqual(body.streamOptions.includeUsage, true)
         XCTAssertEqual(body.messages.map(\.content), ["system", "hello"])
         XCTAssertEqual(built.timeoutInterval, 30, "未设置 Action 级 timeoutSec 时回退 profile 默认值")
 

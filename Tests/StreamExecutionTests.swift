@@ -140,6 +140,36 @@ final class StreamExecutionTests: XCTestCase {
     }
 
     @MainActor
+    func testCoordinatorRecordsCompletedRequestWithoutProviderUsage() async throws {
+        let path = FileManager.default.temporaryDirectory.appendingPathComponent(
+            "ConsolepilotCoordinatorUsageMissing-\(UUID().uuidString).sqlite"
+        ).path
+        let database = try AppDatabase(path: path)
+        let sessions = try SessionStore(database: database)
+        let session = sessions.create(
+            channel: .action, title: "Usage Missing",
+            meta: SessionMeta(
+                actionId: "usage-action", profileId: "remote", provider: .openai,
+                model: "remote-model", sourceApp: "TextEdit"))
+        let usage = UsageStore(database: database)
+        let coordinator = StreamCoordinator(sessionStore: sessions, usageStore: usage)
+        let events = AsyncThrowingStream<StreamEvent, Error> { continuation in
+            continuation.yield(.started(model: "remote-model"))
+            continuation.yield(.delta("完成"))
+            continuation.yield(.finishReason("stop"))
+            continuation.yield(.finished)
+            continuation.finish()
+        }
+
+        await coordinator.consume(events, into: session.id)
+
+        let summary = usage.summary(period: .all)
+        XCTAssertEqual(summary.requestCount, 1, "完成请求即使未返回 usage 也必须计数")
+        XCTAssertEqual(summary.inputTokens, 0)
+        XCTAssertEqual(summary.outputTokens, 0)
+    }
+
+    @MainActor
     func testCoordinatorRecordsUsageExactlyOnceOnCompletion() async throws {
         let path = FileManager.default.temporaryDirectory.appendingPathComponent(
             "ConsolepilotCoordinatorUsageOnce-\(UUID().uuidString).sqlite"

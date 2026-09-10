@@ -29,6 +29,7 @@ package final class StreamCoordinator {
         var outputTokens = 0
         var model: String?
         var finishReason: String?
+        var didStart = false
         var didFinish = false
         var windowStart = ContinuousClock.now
         var lastCheckpoint = Date.distantPast
@@ -133,6 +134,7 @@ package final class StreamCoordinator {
                 switch event {
                 case .started(let startedModel):
                     context.model = startedModel
+                    context.didStart = true
                     await execution.mark(.streaming)
                     onStarted?(sessionId, startedModel)
                 case .delta(let delta):
@@ -217,7 +219,8 @@ package final class StreamCoordinator {
             let profileId = session.profileId,
             let provider = session.provider,
             let model = context.model,
-            context.inputTokens > 0 || context.outputTokens > 0
+            context.didStart,
+            state == .complete || context.inputTokens > 0 || context.outputTokens > 0
         else { return }
         usageStore.record(
             Usage(

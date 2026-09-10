@@ -15,6 +15,7 @@ struct RequestBuilder {
         }
         let body = OpenAICompatRequestBody(
             model: model, messages: messages, stream: true,
+            streamOptions: OpenAICompatStreamOptions(includeUsage: true),
             temperature: request.overrides?.temperature ?? request.profile.temperature,
             maxTokens: request.overrides?.maxTokens ?? request.profile.maxTokens,
             topP: 0.9, frequencyPenalty: 0, presencePenalty: 0)

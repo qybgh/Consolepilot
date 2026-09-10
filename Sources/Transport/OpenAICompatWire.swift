@@ -12,6 +12,7 @@ struct OpenAICompatRequestBody: Codable {
     let model: String
     let messages: [OpenAICompatMessage]
     let stream: Bool
+    let streamOptions: OpenAICompatStreamOptions
     let temperature: Double
     let maxTokens: Int
     let topP: Double
@@ -20,10 +21,19 @@ struct OpenAICompatRequestBody: Codable {
 
     enum CodingKeys: String, CodingKey {
         case model, messages, stream, temperature
+        case streamOptions = "stream_options"
         case maxTokens = "max_tokens"
         case topP = "top_p"
         case frequencyPenalty = "frequency_penalty"
         case presencePenalty = "presence_penalty"
+    }
+}
+
+struct OpenAICompatStreamOptions: Codable {
+    let includeUsage: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case includeUsage = "include_usage"
     }
 }
 
