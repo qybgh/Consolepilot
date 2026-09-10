@@ -35,6 +35,7 @@ final class UsageWindowController: NSWindowController {
         let scroll = NSScrollView()
         scroll.translatesAutoresizingMaskIntoConstraints = false
         scroll.documentView = textView
+        textView.configureAsScrollableDocument()
         scroll.hasVerticalScroller = true
         scroll.scrollerStyle = .overlay
         scroll.drawsBackground = false

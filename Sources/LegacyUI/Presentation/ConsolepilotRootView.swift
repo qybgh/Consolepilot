@@ -357,7 +357,8 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
     private func makeInputView() -> NSView {
         let scrollView = NSScrollView()
         configureTerminalScrollView(scrollView, hasVerticalScroller: true)
-        configureDocumentTextView(inputView)
+        scrollView.documentView = inputView
+        inputView.configureAsScrollableDocument()
         inputView.isEditable = true
         inputView.isRichText = false
         inputView.drawsBackground = true
@@ -366,7 +367,6 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
         inputView.textColor = theme.foreground
         inputView.insertionPointColor = theme.cursor
         inputView.textContainerInset = NSSize(width: 12, height: 8)
-        scrollView.documentView = inputView
 
         let border = NSView()
         border.translatesAutoresizingMaskIntoConstraints = false
@@ -401,17 +401,6 @@ public final class ConsolepilotRootView: NSView, NSSplitViewDelegate {
         scrollView.backgroundColor = .clear
         scrollView.contentView.drawsBackground = false
         scrollView.contentView.backgroundColor = .clear
-    }
-
-    private func configureDocumentTextView(_ textView: NSTextView) {
-        textView.minSize = NSSize(width: 0, height: 0)
-        textView.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
-        textView.isVerticallyResizable = true
-        textView.isHorizontallyResizable = false
-        textView.autoresizingMask = [.width]
-        textView.textContainer?.containerSize = NSSize(
-            width: 0, height: CGFloat.greatestFiniteMagnitude)
-        textView.textContainer?.widthTracksTextView = true
     }
 
     @objc private func toggleSidebarFromButton() {

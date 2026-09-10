@@ -1,6 +1,7 @@
 import AppKit
 import ConsolepilotDomain
 import ConsolepilotInfrastructure
+import ConsolepilotLegacyUI
 import SwiftUI
 
 /// SwiftUI `Settings` 场景内容：承载 TOML 配置编辑器。
@@ -211,13 +212,7 @@ final class SettingsEditorView: NSView, NSTextViewDelegate {
         textView.insertionPointColor = NSColor.systemTeal
         textView.backgroundColor = NSColor(calibratedWhite: 0.11, alpha: 1)
         textView.textContainerInset = NSSize(width: 16, height: 16)
-        textView.minSize = NSSize(width: 0, height: 0)
-        textView.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
-        textView.isVerticallyResizable = true
-        textView.isHorizontallyResizable = false
-        textView.autoresizingMask = [.width]
-        textView.textContainer?.containerSize = NSSize(width: 0, height: CGFloat.greatestFiniteMagnitude)
-        textView.textContainer?.widthTracksTextView = true
+        textView.configureAsScrollableDocument()
         textView.textContainer?.lineBreakMode = .byCharWrapping
 
         for button in [initButton, saveButton, discardButton, reloadButton] {

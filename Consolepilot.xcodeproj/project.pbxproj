@@ -68,6 +68,7 @@
 		759D7E651CEDA7A20FD3717D /* ScrollbackTrimmer.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2C433072A74072B79B836AC /* ScrollbackTrimmer.swift */; };
 		78B9058D5B4190EC888913D2 /* ConsolepilotInfrastructure.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B1FCF90D34136B2696EF1F27 /* ConsolepilotInfrastructure.framework */; };
 		7D444FABCE99DB87F144191D /* openai-malformed-frame.txt in Resources */ = {isa = PBXBuildFile; fileRef = C5467F96C9FD8F5E43F879AD /* openai-malformed-frame.txt */; };
+		7FD188EC5975869B57910664 /* ScrollableTextViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF6DE29E109947B22A39EA8D /* ScrollableTextViewTests.swift */; };
 		80842671DD809431A1E8F3D1 /* MarkdownMessageRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 237C2E68DC23419C10F28A58 /* MarkdownMessageRenderer.swift */; };
 		80AE29ABD660A7F59DF898F2 /* anthropic-messages-stream.txt in Resources */ = {isa = PBXBuildFile; fileRef = CF8733771374C8C42E936C19 /* anthropic-messages-stream.txt */; };
 		8113E09B7BE80F13C8908C15 /* URLProtocolStub.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7204B672BC36BDA7C3E8022 /* URLProtocolStub.swift */; };
@@ -93,6 +94,7 @@
 		96F225E8D29549AA1CE85C79 /* AccessibilityCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B4831E2AFFF71D1C86DEC9E /* AccessibilityCapture.swift */; };
 		9EA0D7AB92E1A8E03E28B905 /* TerminalNSTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8D76FA3C58EA85E51646213 /* TerminalNSTextView.swift */; };
 		9F38BEFE5D2696D91DD8BE08 /* ConsolepilotInfrastructure.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = B1FCF90D34136B2696EF1F27 /* ConsolepilotInfrastructure.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		9F413B3CE2C90D527D924DC2 /* ScrollableTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39B8BDB9C29023BCA108A0E2 /* ScrollableTextView.swift */; };
 		A05E3E5A3D5D577B0845CB02 /* Migrations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EA091CCFD5450A301A89260 /* Migrations.swift */; };
 		A06704AAF3DE93DD21085302 /* StreamExecutionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DAF34B3338FB73EC985AC0A /* StreamExecutionTests.swift */; };
 		A104C932A5FDCE7025C0E9E4 /* RequestBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F0E0F0CC6EEF80B7A83C4F0 /* RequestBuilder.swift */; };
@@ -304,6 +306,7 @@
 		367B4B939B2B0BB8FC09C111 /* ContextTrim.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContextTrim.swift; sourceTree = "<group>"; };
 		384C380467AE493EEFC50378 /* InfrastructureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InfrastructureTests.swift; sourceTree = "<group>"; };
 		393E308E5EC0FB20D978561E /* SSEDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSEDecoder.swift; sourceTree = "<group>"; };
+		39B8BDB9C29023BCA108A0E2 /* ScrollableTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScrollableTextView.swift; sourceTree = "<group>"; };
 		3AC31D4C2DF8CC6D29DD1C85 /* PermissionChecker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionChecker.swift; sourceTree = "<group>"; };
 		3D213774FDBA2FF304F90FDC /* openai-chat-completion-stream.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "openai-chat-completion-stream.txt"; sourceTree = "<group>"; };
 		3DE0D139DB6FA1403006695A /* .swiftlint.yml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = .swiftlint.yml; sourceTree = "<group>"; };
@@ -351,6 +354,7 @@
 		A9E581F7C45AADB7DE2CF38D /* UsageRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageRecord.swift; sourceTree = "<group>"; };
 		A9EB493C71724BF4ED6000F5 /* MarkdownStyler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownStyler.swift; sourceTree = "<group>"; };
 		AEBD1E6554C74CF702118BDC /* SQLiteRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteRepositoryTests.swift; sourceTree = "<group>"; };
+		AF6DE29E109947B22A39EA8D /* ScrollableTextViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScrollableTextViewTests.swift; sourceTree = "<group>"; };
 		B07E1861A8B227EB3D27D691 /* RenderingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenderingTests.swift; sourceTree = "<group>"; };
 		B0863F21C4996B339A1FC23A /* MessageRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageRecord.swift; sourceTree = "<group>"; };
 		B1FCF90D34136B2696EF1F27 /* ConsolepilotInfrastructure.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ConsolepilotInfrastructure.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -564,6 +568,7 @@
 				B6E13AE1A6ADBF7624E73205 /* ProviderContractTests.swift */,
 				B07E1861A8B227EB3D27D691 /* RenderingTests.swift */,
 				DD36A78C1B49D5D3C4385D18 /* RepositoryContractTests.swift */,
+				AF6DE29E109947B22A39EA8D /* ScrollableTextViewTests.swift */,
 				747110E1E744C8F4DBC01913 /* SecretResolverTests.swift */,
 				83119EDB581D8339ED6E19F7 /* ServerTests.swift */,
 				AEBD1E6554C74CF702118BDC /* SQLiteRepositoryTests.swift */,
@@ -706,6 +711,7 @@
 				29EDE3FDB8458C42AF85CC88 /* ChatTranscriptView.swift */,
 				2D19A736DFC24EEC1693C175 /* ConsolepilotRootView.swift */,
 				ED0913E3C999EE50F3CDA234 /* OverlayScroller.swift */,
+				39B8BDB9C29023BCA108A0E2 /* ScrollableTextView.swift */,
 			);
 			path = Presentation;
 			sourceTree = "<group>";
@@ -1109,6 +1115,7 @@
 				80842671DD809431A1E8F3D1 /* MarkdownMessageRenderer.swift in Sources */,
 				8BB71C550267D60E21A1B2C7 /* MarkdownStyler.swift in Sources */,
 				544D06C962BF7C803B22153E /* OverlayScroller.swift in Sources */,
+				9F413B3CE2C90D527D924DC2 /* ScrollableTextView.swift in Sources */,
 				759D7E651CEDA7A20FD3717D /* ScrollbackTrimmer.swift in Sources */,
 				9EA0D7AB92E1A8E03E28B905 /* TerminalNSTextView.swift in Sources */,
 				881F616F3F5B05F527B44BBC /* TerminalRenderer.swift in Sources */,
@@ -1233,6 +1240,7 @@
 				58D0D10614EF5D88A9C68844 /* RenderingTests.swift in Sources */,
 				4F573AB5E44CA518A3AD6E05 /* RepositoryContractTests.swift in Sources */,
 				05E7960BCF9AF50C3EC3A5DF /* SQLiteRepositoryTests.swift in Sources */,
+				7FD188EC5975869B57910664 /* ScrollableTextViewTests.swift in Sources */,
 				8283B1AC01220744C1C9D9FF /* SecretResolverTests.swift in Sources */,
 				1660100D058D58C115123DDC /* ServerTests.swift in Sources */,
 				0637C59C24097ABE29F93845 /* StabilityTests.swift in Sources */,
