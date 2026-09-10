@@ -16,8 +16,8 @@
 | P1-B 领域与存储 | 完成 | 见 P1-B 验收记录（Repository 实现，2026-09-09） |
 | P1-C 流与并发重建 | 完成 | 见 P1-C 验收记录（流与并发重建，2026-09-09） |
 | P1-D Provider 统一 contract + fixture | 完成 | 见 P1-D 验收记录（Provider 统一 contract，2026-09-09） |
-| P1-E Action 生命周期与配置处置 | 未开始 | — |
-| P1-F 死代码清理与收尾 | 未开始 | — |
+| P1-E Action 生命周期与配置处置 | 完成 | 见 P1-E 验收记录与 2026-09-10 收尾记录 |
+| P1-F 死代码清理与收尾 | 完成 | 见 P1-F 验收记录与 2026-09-10 收尾记录 |
 
 ### Preflight 基线记录（2026-09-09）
 
@@ -340,3 +340,12 @@
   - 落地：新增纯领域裁剪器 `Sources/Domain/Providers/ContextTrim.swift`（不 import GRDB/AppKit，预算=system+消息正文；system 始终保留并优先占预算）；`ActionRunner.run` 与主窗口聊天提交（`ConsolepilotRootView.submit`）在构造 ChatRequest 前对请求副本裁剪；落库/界面历史保持完整，重复触发结果确定；超预算时 `Log.debug` 记录丢弃条数/是否截断/预算。
   - 测试：新增 `ContextTrimTests` 7 项（预算内原样/空历史/整条丢弃保最新/仅剩最新时字符边界截断/多字节不拆（中=3、😀=4 字节）/system 占预算且保留/与消息合计不超预算）+ InfrastructureTests 3 项（解析与默认、`512/0` 被拒、ActionRunner 端到端：两次触发后第二次请求字节 ≤ Action 预算 1024 且保留最新轮 prompt）。门禁 **127 项全绿**（117 + 10）；`make lint` 全绿（drift/格式/SwiftLint/analyze/密钥/import 方向/残留扫描零违规）。
   - 交付产物重建：`make release VERSION=0.2.0-p1` → `Consolepilot-0.2.0-p1.zip` SHA `10c3eae2…`（Apple Development 签名，Team `3CSL8ZN3AN`），消费者侧 `shasum -a 256 -c` 与 `codesign --verify --deep --strict` 校验通过；包内 `DefaultConfig.toml` 含 `maxContextBytes` 注释示例。CONFIG.md 已同步字段语义、层级覆盖、裁剪策略与下限规则。
+
+### P1 交付后收尾验收记录（2026-09-10）
+
+- 用量窗口空白修复：根因是 `NSTextView` 作为 `NSScrollView.documentView` 时未配置可伸缩文档尺寸；macOS 15 的 AppKit 不会再把零尺寸文档视图自动扩到视口，因而窗口只剩背景。新增共享 `configureAsScrollableDocument()`，统一用于用量窗口、Settings 编辑器和主输入框，并增加视口宽度回归测试。实际打开窗口已验证显示 `今日/近 7 天/全部：7 次请求 · 输入 7 · 输出 950`。
+- 用量计数停滞修复：根因有两层——OpenAI 兼容流请求未发送 `stream_options.include_usage=true`，多数真实 Provider 因而不返回 usage；`StreamCoordinator` 又只在收到 token 数时写 usage，导致请求次数也不增长。现请求显式索取 usage；已完成请求即使 Provider 不返回 usage，也记录一次请求并以未知 token（0）统计；取消流仍不计数。新增“无 usage 的完成流必须计一次请求”和请求体 `stream_options` 契约测试。
+- 门禁：`make test` **131 项全绿**；`make lint` 全绿（swift-format/SwiftLint/analyze/import 方向/残留扫描；periphery 保持既有报告性豁免）；`make build` Debug 通过。
+- 交付产物重建：`make release VERSION=0.2.0-p1` → `dist/Consolepilot-0.2.0-p1.zip` SHA-256 `344df74a17a5be847bf88066a03152f60d583b7fbcc7870b4c5245352d9590ca`；包内 App/CLI `shasum -c` 通过，App 为 arm64+x86_64、版本 `0.2.0-p1`，Apple Development 证书 `WCHFR3G7VB` 签名且 `codesign --verify --deep --strict` 通过。
+- Git 清理：`HEAD` 实际从未 detached，始终指向本地 `main`；异常来源是远端仍停留在旧 `mvp version` 提交，以及 Codex 遗留的 `refs/codex/*` 临时 tree 引用。已将 `main` 快进推送到 `origin/main`、刷新 `origin/HEAD -> origin/main`，并删除 `refs/codex/*`。代码修复提交：`f212a69 fix: render usage statistics on macOS 15`、`0bb4a42 fix: record completed requests without provider usage`。
+- 交接结论：P1 已完成并生成签名交付物；macOS 14 已完成首轮实机验收且未发现阻断问题。后续工作转入 P2/P3 规划，不再改动 P0/P1 已锁定决策。
